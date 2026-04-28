@@ -1,11 +1,27 @@
 """
 FRED — Families' Rights and Entitlements Directory
-Beta Version 0.4
+Beta Version 0.5
 
-Changes in v0.4:
+Complete build incorporating all agreed changes:
+- Report language throughout (not audit)
+- Lawful/unlawful throughout (not legal/illegal)
 - Full landing page as entry point
-- Simplified upload — single zone, add another option
-- Complete flow: landing > upload > questions > results
+- Get my report as single primary CTA
+- Traffic light before upload
+- Single upload zone with expander
+- Sneak peek with email capture for beta
+- Three tier engine: red #C0392B, amber #D4A017, green #1E8449
+- Named accountable person amber only
+- APDR connection in delivery log
+- Lack of evidence is evidence of lack
+- Correspondence module with transcript cross reference
+- Post meeting summary generation
+- Word and PDF document support
+- Password protected document guidance
+- School policy cross reference
+- Annual review date capture
+- Subscription signal specific to findings
+- Full survey with notification opt-in
 """
 
 import streamlit as st
@@ -22,7 +38,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.units import mm
 
 # ─────────────────────────────────────────────
-# COLOUR SYSTEM
+# CONSTANTS
 # ─────────────────────────────────────────────
 
 BRAND_BLUE = "#1B4F72"
@@ -55,357 +71,188 @@ st.set_page_config(
 
 st.markdown(f"""
 <style>
-* {{ box-sizing: border-box; }}
-.main {{ max-width: 780px; margin: 0 auto; }}
+*{{box-sizing:border-box;}}
+.main{{max-width:780px;margin:0 auto;}}
 
-/* ── NAV ── */
-.fred-nav {{
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 0 14px 0;
-    border-bottom: 0.5px solid #D5D8DC;
-    margin-bottom: 0;
-}}
-.fred-nav-logo {{
-    font-size: 24px; font-weight: 900; letter-spacing: 4px; color: {BRAND_BLUE};
-}}
-.fred-nav-links {{
-    display: flex; gap: 24px; align-items: center;
-}}
-.fred-nav-link {{
-    font-size: 13px; color: {GREY}; cursor: pointer;
-    text-decoration: none;
-}}
+.fred-nav{{display:flex;justify-content:space-between;align-items:center;
+    padding:14px 0;border-bottom:0.5px solid #D5D8DC;margin-bottom:0;}}
+.fred-nav-logo{{font-size:15px;font-weight:500;letter-spacing:1px;color:{GREY};}}
+.fred-nav-link{{font-size:13px;color:{GREY};cursor:pointer;}}
+.fred-nav-links{{display:flex;gap:24px;}}
 
-/* ── HERO ── */
-.fred-hero {{
-    padding: 56px 0 48px 0; text-align: center;
-}}
-.fred-hero-eyebrow {{
-    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
-    color: {GREY}; margin-bottom: 16px;
-}}
-.fred-hero-title {{
-    font-size: 38px; font-weight: 900; line-height: 1.15;
-    color: #1A252F; margin-bottom: 16px;
-}}
-.fred-hero-title span {{ color: {BRAND_BLUE}; }}
-.fred-hero-origin {{
-    font-size: 14px; color: {GREY}; font-style: italic; margin-bottom: 20px;
-}}
-.fred-hero-sub {{
-    font-size: 16px; color: #2C3E50; line-height: 1.75;
-    max-width: 580px; margin: 0 auto 32px auto;
-}}
-.fred-hero-actions {{
-    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-}}
-.fred-btn-primary {{
-    background: {BRAND_BLUE}; color: white; border: none;
-    padding: 13px 32px; border-radius: 8px; font-size: 15px;
-    font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
-}}
-.fred-btn-secondary {{
-    background: transparent; color: {BRAND_BLUE};
-    border: 1.5px solid {BRAND_BLUE};
-    padding: 13px 32px; border-radius: 8px; font-size: 15px;
-    font-weight: 700; cursor: pointer;
-}}
+.fred-beta{{background:#FEF9E7;border-top:0.5px solid #F9CA24;
+    border-bottom:0.5px solid #F9CA24;padding:9px 0;text-align:center;
+    font-size:12px;color:#7D6608;}}
 
-/* ── BETA BAR ── */
-.fred-beta-bar {{
-    background: #FEF9E7; border-top: 0.5px solid #F9CA24;
-    border-bottom: 0.5px solid #F9CA24;
-    padding: 10px 0; text-align: center;
-    font-size: 13px; color: #7D6608; margin: 0;
-}}
+.fred-hero{{padding:52px 0 44px;text-align:center;}}
+.fred-big{{font-size:80px;font-weight:500;letter-spacing:8px;
+    color:{BRAND_BLUE};line-height:1;margin-bottom:6px;}}
+.fred-full{{font-size:12px;letter-spacing:1.5px;color:{GREY};
+    margin-bottom:24px;text-transform:uppercase;}}
+.fred-hero-title{{font-size:26px;font-weight:500;color:#1A252F;
+    line-height:1.25;margin-bottom:12px;}}
+.fred-hero-title span{{color:{BRAND_BLUE};}}
+.fred-hero-origin{{font-size:13px;color:{GREY};font-style:italic;margin-bottom:16px;}}
+.fred-hero-sub{{font-size:14px;color:#2C3E50;line-height:1.75;
+    max-width:500px;margin:0 auto 12px;}}
+.fred-hero-flex{{font-size:14px;color:#2C3E50;line-height:1.6;
+    max-width:460px;margin:0 auto 28px;}}
+.fred-hero-flex span{{color:{BRAND_BLUE};font-weight:500;}}
+.fred-hero-cta{{display:flex;flex-direction:column;align-items:center;gap:5px;}}
+.fred-btn-primary{{background:{BRAND_BLUE};color:white;border:none;
+    padding:13px 36px;border-radius:8px;font-size:15px;font-weight:500;
+    cursor:pointer;display:flex;align-items:center;gap:9px;}}
+.fred-btn-primary svg{{width:16px;height:16px;fill:white;}}
+.fred-btn-reassure{{font-size:13px;color:{GREY};font-style:italic;margin:3px 0 6px;}}
+.fred-btn-pricing{{font-size:13px;color:{GREY};}}
+.fred-btn-pricing span{{color:{BRAND_BLUE};text-decoration:underline;
+    text-underline-offset:3px;cursor:pointer;}}
 
-/* ── SECTION ── */
-.fred-section {{
-    padding: 48px 0;
-    border-top: 0.5px solid #D5D8DC;
-}}
-.fred-section-label {{
-    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
-    color: {GREY}; margin-bottom: 8px;
-}}
-.fred-section-title {{
-    font-size: 24px; font-weight: 900; color: #1A252F;
-    margin-bottom: 10px; line-height: 1.2;
-}}
-.fred-section-sub {{
-    font-size: 15px; color: #2C3E50; line-height: 1.75;
-    margin-bottom: 28px;
-}}
+.fred-divider{{border:none;border-top:0.5px solid #D5D8DC;margin:0;}}
 
-/* ── HOW IT WORKS STEPS ── */
-.fred-step {{
-    display: flex; gap: 18px; padding: 20px 0;
-    border-bottom: 0.5px solid #D5D8DC;
-}}
-.fred-step:last-child {{ border-bottom: none; }}
-.fred-step-num {{
-    width: 30px; height: 30px; min-width: 30px; border-radius: 50%;
-    background: {BRAND_BLUE}; color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; margin-top: 2px;
-}}
-.fred-step-title {{
-    font-size: 15px; font-weight: 700; color: #1A252F; margin-bottom: 5px;
-}}
-.fred-step-desc {{
-    font-size: 14px; color: #2C3E50; line-height: 1.65;
-}}
-.fred-step-tag {{
-    display: inline-block; font-size: 11px; padding: 2px 9px;
-    border-radius: 6px; margin-top: 7px; font-weight: 600;
-}}
-.tag-audit {{
-    background: #EAFAF1; color: #1E8449;
-    border: 0.5px solid #1E8449;
-}}
-.tag-sub {{
-    background: #EAF2FF; color: {BRAND_BLUE};
-    border: 0.5px solid {BRAND_BLUE};
-}}
+.fred-section{{padding:44px 0;}}
+.fred-sec-label{{font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    color:{GREY};margin-bottom:8px;text-align:center;}}
+.fred-sec-title{{font-size:20px;font-weight:500;color:#1A252F;
+    margin-bottom:16px;text-align:center;}}
+.fred-sec-sub{{font-size:14px;color:#2C3E50;line-height:1.7;
+    margin-bottom:20px;text-align:center;max-width:480px;
+    margin-left:auto;margin-right:auto;}}
 
-/* ── TRAFFIC LIGHTS ── */
-.fred-traffic-box {{
-    background: #F4F6F7; border-radius: 10px; padding: 24px 20px;
-    margin-bottom: 12px;
-}}
-.fred-traffic-row {{
-    display: flex; gap: 13px; align-items: flex-start;
-    margin-bottom: 14px;
-}}
-.fred-traffic-row:last-child {{ margin-bottom: 0; }}
-.fred-dot {{
-    width: 15px; height: 15px; min-width: 15px;
-    border-radius: 50%; margin-top: 3px;
-}}
-.dot-red {{ background: {RED}; }}
-.dot-amber {{ background: {AMBER}; }}
-.dot-green {{ background: {GREEN}; }}
-.fred-traffic-text {{
-    font-size: 14px; color: #2C3E50; line-height: 1.6;
-}}
-.fred-traffic-text strong {{ color: #1A252F; }}
-.fred-traffic-note {{
-    font-size: 12px; color: {GREY}; font-style: italic; margin-top: 10px;
-}}
+.fred-bullets{{list-style:none;display:flex;flex-direction:column;
+    align-items:center;gap:10px;margin-bottom:24px;padding:0;}}
+.fred-bullets li{{font-size:14px;color:#2C3E50;line-height:1.65;
+    display:flex;align-items:flex-start;gap:9px;max-width:460px;}}
+.fred-bdot{{width:6px;height:6px;min-width:6px;border-radius:50%;
+    background:{BRAND_BLUE};margin-top:7px;}}
+.fred-sub-bullet{{color:{BRAND_BLUE};font-weight:500;}}
 
-/* ── PRICING ── */
-.fred-pricing-grid {{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px; margin-top: 4px;
-}}
-.fred-price-card {{
-    background: white; border: 0.5px solid #D5D8DC;
-    border-radius: 12px; padding: 22px 18px;
-    display: flex; flex-direction: column;
-}}
-.fred-price-card.featured {{
-    border: 2px solid {BRAND_BLUE};
-}}
-.fred-price-badge {{
-    font-size: 11px; font-weight: 700;
-    background: {BLUE_BG}; color: {BRAND_BLUE};
-    padding: 3px 10px; border-radius: 6px;
-    display: inline-block; margin-bottom: 12px;
-    border: 0.5px solid {BRAND_BLUE};
-}}
-.fred-price-name {{
-    font-size: 15px; font-weight: 700; color: #1A252F; margin-bottom: 4px;
-}}
-.fred-price-amount {{
-    font-size: 30px; font-weight: 900; color: {BRAND_BLUE}; margin-bottom: 2px;
-}}
-.fred-price-period {{
-    font-size: 12px; color: {GREY}; margin-bottom: 8px; line-height: 1.5;
-}}
-.fred-price-first {{
-    font-size: 12px; color: #2C3E50;
-    background: #F4F6F7; border-radius: 6px;
-    padding: 7px 10px; margin-bottom: 14px; line-height: 1.5;
-}}
-.fred-price-features {{
-    list-style: none; display: flex; flex-direction: column;
-    gap: 8px; margin-bottom: 20px; flex: 1;
-    padding: 0;
-}}
-.fred-price-features li {{
-    font-size: 13px; color: #2C3E50;
-    display: flex; gap: 8px; align-items: flex-start; line-height: 1.45;
-}}
-.fred-price-features li::before {{
-    content: ""; width: 6px; height: 6px; min-width: 6px;
-    border-radius: 50%; background: {BRAND_BLUE}; margin-top: 5px;
-}}
-.fred-price-btn {{
-    width: 100%; padding: 10px; border-radius: 8px; font-size: 14px;
-    font-weight: 700; cursor: pointer; text-align: center;
-    border: 1.5px solid {BRAND_BLUE}; background: transparent;
-    color: {BRAND_BLUE}; margin-top: auto;
-}}
-.fred-price-btn.primary {{
-    background: {BRAND_BLUE}; color: white; border: none;
-}}
-.fred-pricing-note {{
-    font-size: 12px; color: {GREY}; text-align: center;
-    margin-top: 14px; font-style: italic;
-}}
+.fred-upload-wrap{{display:flex;flex-direction:column;align-items:center;gap:8px;}}
+.fred-upload-note{{font-size:11px;color:{GREY};font-style:italic;}}
 
-/* ── TESTIMONIAL ── */
-.fred-testimonial {{
-    background: #F4F6F7; border-radius: 10px; padding: 28px 24px;
-}}
-.fred-quote {{
-    font-size: 17px; color: #1A252F; line-height: 1.75;
-    font-style: italic; margin-bottom: 14px;
-}}
-.fred-quote-attr {{
-    font-size: 13px; color: {GREY};
-}}
+.fred-traffic-legend{{background:#F4F6F7;border-radius:10px;
+    padding:18px 20px;margin-bottom:16px;}}
+.fred-traffic-title{{font-size:13px;font-weight:500;color:#1A252F;margin-bottom:12px;}}
+.fred-trow{{display:flex;gap:11px;align-items:flex-start;margin-bottom:10px;}}
+.fred-trow:last-child{{margin-bottom:0;}}
+.fred-tdot{{width:13px;height:13px;min-width:13px;border-radius:50%;margin-top:3px;}}
+.tdot-red{{background:{RED};}}
+.tdot-amber{{background:{AMBER};}}
+.tdot-green{{background:{GREEN};}}
+.fred-ttext{{font-size:13px;color:#2C3E50;line-height:1.55;}}
+.fred-ttext strong{{color:#1A252F;font-weight:500;}}
 
-/* ── FAQ ── */
-.fred-faq-item {{
-    padding: 16px 0; border-bottom: 0.5px solid #D5D8DC;
-}}
-.fred-faq-item:last-child {{ border-bottom: none; }}
-.fred-faq-q {{
-    font-size: 15px; font-weight: 700; color: #1A252F; margin-bottom: 6px;
-}}
-.fred-faq-a {{
-    font-size: 14px; color: #2C3E50; line-height: 1.65;
-}}
+.fred-upload-zone{{border:1.5px dashed #BDC3C7;border-radius:10px;
+    padding:24px;text-align:center;margin-bottom:10px;}}
+.fred-upload-zone-title{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:4px;}}
+.fred-upload-zone-sub{{font-size:12px;color:{GREY};margin-bottom:14px;}}
+.fred-upload-tip{{background:#F4F6F7;border-radius:6px;padding:10px 14px;
+    font-size:12px;color:{GREY};margin-top:6px;line-height:1.6;}}
+.fred-upload-optional{{font-size:12px;color:{GREY};text-align:center;margin-top:8px;}}
+.fred-upload-optional-link{{color:{BRAND_BLUE};text-decoration:underline;cursor:pointer;}}
 
-/* ── FOOTER ── */
-.fred-footer {{
-    padding: 28px 0; border-top: 0.5px solid #D5D8DC; text-align: center;
-}}
-.fred-footer-logo {{
-    font-size: 20px; font-weight: 900; color: {BRAND_BLUE};
-    letter-spacing: 4px; margin-bottom: 10px;
-}}
-.fred-footer-text {{
-    font-size: 12px; color: {GREY}; line-height: 1.8;
-}}
+.fred-sneak-header{{background:{BRAND_BLUE};color:white;padding:10px 16px;
+    border-radius:6px 6px 0 0;font-size:13px;font-weight:500;}}
+.fred-sneak-body{{padding:14px 16px;background:white;border:1px solid #D5D8DC;
+    border-top:none;}}
+.fred-sneak-entry{{font-size:12px;color:{GREY};font-style:italic;
+    margin-bottom:10px;line-height:1.5;}}
+.fred-sneak-more{{background:#F4F6F7;padding:16px;text-align:center;
+    border:1px solid #D5D8DC;border-top:none;border-radius:0 0 6px 6px;}}
+.fred-sneak-count{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:4px;}}
+.fred-sneak-sub{{font-size:12px;color:{GREY};margin-bottom:8px;
+    line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;}}
+.fred-sneak-ready{{font-size:13px;font-weight:500;color:{BRAND_BLUE};margin-bottom:12px;}}
 
-/* ── AUDIT STYLES ── */
-.fred-header-bar {{
-    background: linear-gradient(135deg, {BRAND_BLUE}, {BRAND_MID});
-    color: white; padding: 28px 24px 20px 24px;
-    border-radius: 10px; margin-bottom: 8px;
-}}
-.fred-header-title {{
-    font-size: 44px; font-weight: 900; letter-spacing: 4px; margin: 0;
-}}
-.fred-header-sub {{
-    font-size: 14px; opacity: 0.85; margin: 5px 0 0 0;
-}}
-.fred-beta-notice {{
-    background: #FEF9E7; border-left: 4px solid #F39C12;
-    padding: 12px 16px; border-radius: 4px;
-    font-size: 13px; color: #7D6608; margin-bottom: 20px;
-}}
-.fred-traffic-legend {{
-    background: #F4F6F7; border-radius: 8px;
-    padding: 16px 20px; margin-bottom: 20px;
-}}
-.fred-traffic-legend-title {{
-    font-size: 13px; font-weight: 700; color: {BRAND_BLUE};
-    margin-bottom: 10px;
-}}
-.fred-trow {{
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-bottom: 8px; font-size: 13px;
-}}
-.fred-trow:last-child {{ margin-bottom: 0; }}
-.fred-tdot {{
-    width: 13px; height: 13px; min-width: 13px;
-    border-radius: 50%; margin-top: 2px;
-}}
-.unlawful-flag {{
-    border-left: 4px solid {RED}; padding: 8px 12px;
-    margin: 6px 0; background: {RED_BG}; border-radius: 0 4px 4px 0;
-    font-size: 13px; color: #922B21; line-height: 1.5;
-}}
-.bestpractice-flag {{
-    border-left: 4px solid {AMBER}; padding: 8px 12px;
-    margin: 6px 0; background: {AMBER_BG}; border-radius: 0 4px 4px 0;
-    font-size: 13px; color: #7D6608; line-height: 1.5;
-}}
-.compliant-flag {{
-    border-left: 4px solid {GREEN}; padding: 8px 12px;
-    margin: 6px 0; background: {GREEN_BG}; border-radius: 0 4px 4px 0;
-    font-size: 13px; color: #1D6A36; line-height: 1.5;
-}}
-.pattern-flag {{
-    border-left: 4px solid {PURPLE}; padding: 8px 12px;
-    margin: 6px 0; background: {PURPLE_BG}; border-radius: 0 4px 4px 0;
-    font-size: 13px; color: #6C3483; line-height: 1.5;
-}}
-.tactical-flag {{
-    border-left: 4px solid {BRAND_BLUE}; padding: 8px 12px;
-    margin: 6px 0; background: {BLUE_BG}; border-radius: 0 4px 4px 0;
-    font-size: 13px; color: #1A3A5C; line-height: 1.5;
-}}
-.audit-header-red {{
-    background: {RED}; color: white;
-    padding: 10px 16px; border-radius: 6px 6px 0 0;
-    font-weight: 700; font-size: 13px;
-}}
-.audit-header-amber {{
-    background: {AMBER}; color: white;
-    padding: 10px 16px; border-radius: 6px 6px 0 0;
-    font-weight: 700; font-size: 13px;
-}}
-.audit-header-green {{
-    background: {GREEN}; color: white;
-    padding: 10px 16px; border-radius: 6px 6px 0 0;
-    font-weight: 700; font-size: 13px;
-}}
-.audit-body {{
-    background: white; border: 1px solid #D5D8DC;
-    border-top: none; padding: 16px; border-radius: 0 0 6px 6px;
-    font-size: 13px; line-height: 1.7; margin-bottom: 16px;
-}}
-.anchor-line {{
-    background: {BRAND_BLUE}; color: white; padding: 11px 16px;
-    border-radius: 6px; font-style: italic;
-    font-size: 13px; margin-top: 10px; text-align: center;
-}}
-.evidence-line {{
-    background: #2C3E50; color: white; padding: 9px 16px;
-    border-radius: 6px; font-style: italic;
-    font-size: 13px; margin-top: 6px; text-align: center;
-}}
-.subscription-signal {{
-    background: linear-gradient(135deg, {BRAND_BLUE}, {BRAND_MID});
-    color: white; padding: 22px 24px; border-radius: 8px;
-    margin: 24px 0; font-size: 14px; line-height: 1.75;
-}}
-.review-capture {{
-    background: {BLUE_BG}; border: 1px solid #AED6F1;
-    border-radius: 8px; padding: 16px 20px; margin: 16px 0;
-    font-size: 13px; color: #1A3A5C; line-height: 1.6;
-}}
-.upload-tip {{
-    background: #F4F6F7; border-radius: 6px;
-    padding: 10px 14px; font-size: 12px;
-    color: {GREY}; margin-top: 6px; line-height: 1.6;
-}}
-.contradiction-flag {{
-    border-left: 4px solid {RED}; padding: 10px 14px;
-    margin: 8px 0; background: {RED_BG}; border-radius: 0 6px 6px 0;
-    font-size: 13px; color: #922B21; line-height: 1.6;
-}}
-.stButton > button {{
-    background: {BRAND_BLUE}; color: white; border: none;
-    padding: 10px 28px; border-radius: 6px; font-weight: 700;
-    font-size: 15px; width: 100%;
-}}
-.stButton > button:hover {{ background: {BRAND_MID}; }}
+.fred-pricing-grid{{display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:14px;margin-top:4px;}}
+.fred-price-card{{background:white;border:0.5px solid #D5D8DC;
+    border-radius:12px;padding:20px;display:flex;flex-direction:column;}}
+.fred-price-card.featured{{border:2px solid {BRAND_BLUE};}}
+.fred-price-badge{{font-size:11px;font-weight:500;background:{BLUE_BG};
+    color:#0C447C;padding:3px 10px;border-radius:6px;
+    display:inline-block;margin-bottom:12px;}}
+.fred-price-name{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:3px;}}
+.fred-price-amount{{font-size:28px;font-weight:500;color:{BRAND_BLUE};margin-bottom:2px;}}
+.fred-price-period{{font-size:11px;color:{GREY};margin-bottom:6px;line-height:1.5;}}
+.fred-price-first{{font-size:11px;color:#2C3E50;background:#F4F6F7;
+    border-radius:6px;padding:6px 10px;margin-bottom:12px;line-height:1.5;}}
+.fred-price-features{{list-style:none;padding:0;display:flex;flex-direction:column;
+    gap:7px;margin-bottom:18px;flex:1;}}
+.fred-price-features li{{font-size:12px;color:#2C3E50;display:flex;gap:7px;
+    align-items:flex-start;line-height:1.4;}}
+.fred-price-features li::before{{content:"";width:5px;height:5px;min-width:5px;
+    border-radius:50%;background:{BRAND_BLUE};margin-top:4px;}}
+
+.fred-quote-box{{background:#F4F6F7;border-radius:12px;padding:28px 24px;}}
+.fred-quote{{font-size:16px;color:#1A252F;line-height:1.75;
+    font-style:italic;margin-bottom:14px;}}
+.fred-quote-attr{{font-size:13px;color:{GREY};}}
+
+.fred-faq-item{{padding:14px 0;border-bottom:0.5px solid #D5D8DC;}}
+.fred-faq-item:last-child{{border-bottom:none;}}
+.fred-faq-q{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:5px;}}
+.fred-faq-a{{font-size:13px;color:#2C3E50;line-height:1.65;}}
+
+.fred-footer{{padding:28px 0;border-top:0.5px solid #D5D8DC;text-align:center;}}
+.fred-footer-logo{{font-size:16px;font-weight:500;color:{BRAND_BLUE};
+    letter-spacing:3px;margin-bottom:8px;}}
+.fred-footer-text{{font-size:11px;color:{GREY};line-height:1.8;}}
+
+.fred-header-bar{{background:linear-gradient(135deg,{BRAND_BLUE},{BRAND_MID});
+    color:white;padding:24px;border-radius:10px;margin-bottom:12px;}}
+.fred-header-title{{font-size:40px;font-weight:500;letter-spacing:4px;margin:0;}}
+.fred-header-sub{{font-size:13px;opacity:0.85;margin:4px 0 0 0;}}
+
+.fred-beta-notice{{background:#FEF9E7;border-left:4px solid #F39C12;
+    padding:12px 16px;border-radius:4px;font-size:13px;
+    color:#7D6608;margin-bottom:20px;}}
+
+.unlawful-flag{{border-left:4px solid {RED};padding:8px 12px;margin:6px 0;
+    background:{RED_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#922B21;line-height:1.5;}}
+.bestpractice-flag{{border-left:4px solid {AMBER};padding:8px 12px;margin:6px 0;
+    background:{AMBER_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#7D6608;line-height:1.5;}}
+.compliant-flag{{border-left:4px solid {GREEN};padding:8px 12px;margin:6px 0;
+    background:{GREEN_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#1D6A36;line-height:1.5;}}
+.pattern-flag{{border-left:4px solid {PURPLE};padding:8px 12px;margin:6px 0;
+    background:{PURPLE_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#6C3483;line-height:1.5;}}
+.tactical-flag{{border-left:4px solid {BRAND_BLUE};padding:8px 12px;margin:6px 0;
+    background:{BLUE_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#1A3A5C;line-height:1.5;}}
+.contradiction-flag{{border-left:4px solid {RED};padding:10px 14px;margin:8px 0;
+    background:{RED_BG};border-radius:0 6px 6px 0;font-size:13px;
+    color:#922B21;line-height:1.6;}}
+.audit-header-red{{background:{RED};color:white;padding:10px 16px;
+    border-radius:6px 6px 0 0;font-weight:500;font-size:13px;}}
+.audit-header-amber{{background:{AMBER};color:white;padding:10px 16px;
+    border-radius:6px 6px 0 0;font-weight:500;font-size:13px;}}
+.audit-header-green{{background:{GREEN};color:white;padding:10px 16px;
+    border-radius:6px 6px 0 0;font-weight:500;font-size:13px;}}
+.audit-body{{background:white;border:1px solid #D5D8DC;border-top:none;
+    padding:16px;border-radius:0 0 6px 6px;font-size:13px;
+    line-height:1.7;margin-bottom:16px;}}
+.anchor-line{{background:{BRAND_BLUE};color:white;padding:11px 16px;
+    border-radius:6px;font-style:italic;font-size:13px;
+    margin-top:10px;text-align:center;}}
+.evidence-line{{background:#2C3E50;color:white;padding:9px 16px;
+    border-radius:6px;font-style:italic;font-size:13px;
+    margin-top:6px;text-align:center;}}
+.review-capture{{background:{BLUE_BG};border:1px solid #AED6F1;
+    border-radius:8px;padding:16px 20px;margin:16px 0;
+    font-size:13px;color:#1A3A5C;line-height:1.6;}}
+.subscription-signal{{background:linear-gradient(135deg,{BRAND_BLUE},{BRAND_MID});
+    color:white;padding:22px 24px;border-radius:8px;
+    margin:24px 0;font-size:14px;line-height:1.75;}}
+
+.stButton>button{{background:{BRAND_BLUE};color:white;border:none;
+    padding:10px 28px;border-radius:6px;font-weight:500;
+    font-size:15px;width:100%;}}
+.stButton>button:hover{{background:{BRAND_MID};}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -417,7 +264,7 @@ defaults = {
     'stage': 'landing',
     'answers': {},
     'extracted_sections': {},
-    'audit_results': [],
+    'report_results': [],
     'section_e_results': [],
     'policy_text': '',
     'raw_text': '',
@@ -425,14 +272,15 @@ defaults = {
     'transcript_text': '',
     'correspondence_analysis': None,
     'post_meeting_email': '',
-    'all_documents': [],
+    'sneak_peek_result': None,
+    'email_captured': False,
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
 # ─────────────────────────────────────────────
-# OFSTED PRINCIPLES
+# OFSTED STABLE PRINCIPLES
 # ─────────────────────────────────────────────
 
 OFSTED_PRINCIPLES = [
@@ -446,7 +294,7 @@ OFSTED_PRINCIPLES = [
 # DOCUMENT READING
 # ─────────────────────────────────────────────
 
-def read_uploaded_file(uploaded_file):
+def read_file(uploaded_file):
     if uploaded_file is None:
         return None, None
     name = uploaded_file.name.lower()
@@ -500,7 +348,7 @@ def identify_sections(text):
                 sections[key] = content
     return sections
 
-def extract_provision_entries(text):
+def extract_entries(text):
     numbered = re.split(r'\n\s*\d+[\.\)]\s+', text)
     if len(numbered) > 2:
         return [e.strip() for e in numbered if len(e.strip()) > 30]
@@ -511,11 +359,29 @@ def extract_provision_entries(text):
     entries = [p.strip() for p in paragraphs if len(p.strip()) > 30]
     return entries if entries else [text]
 
+def detect_doc_type(text):
+    tl = text.lower()
+    if any(kw in tl for kw in ['send policy', 'accessibility plan', 'behaviour policy', 'inclusion policy']):
+        return 'policy'
+    if any(kw in tl for kw in ['dear', 'kind regards', 'subject:', 'thank you for attending', 'thank you for coming']):
+        return 'email'
+    if any(kw in tl for kw in ['speaker', 'speaker 1', 'speaker 2', 'transcript', '[end]', 'yeah um', 'um ']):
+        return 'transcript'
+    if any(kw in tl for kw in ['section a', 'section b', 'section e', 'section f', 'education health and care']):
+        return 'ehcp'
+    if any(kw in tl for kw in ['educational psychologist', 'ep report', 'cognitive ability', 'standardised score']):
+        return 'ep_report'
+    if any(kw in tl for kw in ['occupational therapy', 'fine motor', 'sensory processing', 'ot report']):
+        return 'ot_report'
+    if any(kw in tl for kw in ['speech and language', 'salt report', 'communication assessment', 'language skills']):
+        return 'salt_report'
+    return 'other'
+
 # ─────────────────────────────────────────────
 # RULES ENGINE
 # ─────────────────────────────────────────────
 
-PROHIBITED_LANGUAGE = {
+PROHIBITED = {
     r'\bshould\b': ('should', 'creates no lawful duty — it is a suggestion, not a statutory commitment'),
     r'\bcould\b': ('could', 'creates no lawful duty — possibility is not provision'),
     r'\bmay\b(?!\s+not)': ('may', 'means may not — no guaranteed entitlement is created'),
@@ -538,56 +404,57 @@ PROHIBITED_LANGUAGE = {
     r'\bflexib\w*\b': ('flexible/flexibility', 'unmeasurable — who decides what is flexible and when is unspecified'),
     r'\bresponsive\b': ('responsive', 'reactive delivery is not specified provision — frequency and trigger criteria must be stated'),
     r'\btailored\b': ('tailored', 'undefined without specifying what the tailoring consists of'),
-    r'\bembedded\b': ('embedded', 'embedded across the day is not quantified provision — frequency and context must be stated'),
+    r'\bembedded\b': ('embedded', 'not a quantified description of delivery — frequency and context must be stated'),
 }
 
-UNIVERSAL_INDICATORS = [
+UNIVERSAL = [
     'high-quality teaching', 'quality first teaching', 'broad and balanced curriculum',
     'differentiated curriculum', 'universal offer', 'graduated response',
     'scaffolding for tasks', 'quality teaching', 'ordinarily available',
 ]
 
-QUANT_PATTERNS = {
+QUANT = {
     'frequency': r'\b(\d+\s*(?:times?|sessions?|hours?)\s*(?:per|a|each)\s*(?:week|day|term|month)|daily|weekly|fortnightly|monthly|termly|once|twice)\b',
     'duration': r'\b(\d+\s*(?:minutes?|hours?|mins?))\b',
     'role': r'\b(therapist|psychologist|specialist|SENCO|senco|teacher|LSA|TA|teaching assistant|learning support|coordinator|practitioner|nurse|OT|SALT|SLT|occupational|speech|language)\b',
     'named_individual': r'\b(Mrs|Mr|Ms|Dr|Miss)\s+[A-Z][a-z]+\b',
 }
 
-def check_quant(text):
-    return {k: bool(re.search(p, text, re.IGNORECASE)) for k, p in QUANT_PATTERNS.items()}
+def chk_quant(text):
+    return {k: bool(re.search(p, text, re.IGNORECASE)) for k, p in QUANT.items()}
 
-def check_prohibited(text):
+def chk_prohibited(text):
     findings = []
     seen = set()
     tl = text.lower()
-    for pattern, (term, exp) in PROHIBITED_LANGUAGE.items():
+    for pattern, (term, exp) in PROHIBITED.items():
         if term not in seen and re.search(pattern, tl, re.IGNORECASE):
             findings.append((term, exp))
             seen.add(term)
     return findings
 
-def check_universal(text):
+def chk_universal(text):
     tl = text.lower()
-    return [i for i in UNIVERSAL_INDICATORS if i in tl]
+    return [i for i in UNIVERSAL if i in tl]
 
-def check_laundering(text):
+def chk_laundering(text):
     patterns = [r'\bwould benefit from\b', r'\bit is recommended\b',
                 r'\bit is suggested\b', r'\bmay benefit from\b']
     return [p.replace(r'\b', '') for p in patterns if re.search(p, text, re.IGNORECASE)]
 
-def check_dilution(text):
-    patterns = [r'\bshared with other\b', r'\bmay be shared\b', r'\bas resources allow\b',
-                r'\bsubject to availability\b', r'\bwhen staff are available\b',
-                r'\bdepending on resources\b', r'\bwider class\b']
+def chk_dilution(text):
+    patterns = [r'\bshared with other\b', r'\bmay be shared\b',
+                r'\bas resources allow\b', r'\bsubject to availability\b',
+                r'\bwhen staff are available\b', r'\bdepending on resources\b',
+                r'\bwider class\b', r"\bat the school'?s discretion\b"]
     return [p.replace(r'\b', '') for p in patterns if re.search(p, text, re.IGNORECASE)]
 
-def check_policy_gaps(entry_text, policy_text):
-    if not policy_text:
+def chk_policy(entry, policy):
+    if not policy:
         return []
     gaps = []
-    pl = policy_text.lower()
-    el = entry_text.lower()
+    pl = policy.lower()
+    el = entry.lower()
     commitments = [
         ('1:1 support', ['1:1', 'one to one', 'individual support']),
         ('named key worker', ['key worker', 'key person']),
@@ -608,12 +475,12 @@ def check_policy_gaps(entry_text, policy_text):
 
 def is_compliant(text, quant):
     has_must = bool(re.search(r'\bmust\b', text, re.IGNORECASE))
-    prohibited = check_prohibited(text)
-    universal = check_universal(text)
+    prohibited = chk_prohibited(text)
+    universal = chk_universal(text)
     return (has_must and quant.get('frequency') and quant.get('duration')
             and quant.get('role') and not prohibited and not universal)
 
-def get_ofsted_principle(text):
+def get_ofsted(text):
     tl = text.lower()
     if any(w in tl for w in ['safe', 'risk', 'physical', 'behaviour', 'incident']):
         return OFSTED_PRINCIPLES[3]
@@ -624,37 +491,43 @@ def get_ofsted_principle(text):
     return OFSTED_PRINCIPLES[0]
 
 def audit_entry(entry_text, entry_number, policy_text=''):
-    quant = check_quant(entry_text)
-    prohibited = check_prohibited(entry_text)
-    universal = check_universal(entry_text)
-    laundering = check_laundering(entry_text)
-    dilution = check_dilution(entry_text)
+    quant = chk_quant(entry_text)
+    prohibited = chk_prohibited(entry_text)
+    universal = chk_universal(entry_text)
+    laundering = chk_laundering(entry_text)
+    dilution = chk_dilution(entry_text)
     compliant = is_compliant(entry_text, quant)
-    policy_gaps = check_policy_gaps(entry_text, policy_text)
+    policy_gaps = chk_policy(entry_text, policy_text)
 
     unlawful = []
     for term, exp in prohibited:
         unlawful.append(f'"{term}" — {exp}.')
     if not quant['frequency']:
-        unlawful.append('No frequency specified — how often provision is delivered is not stated. The SEND Code of Practice requires provision to be specified and quantified.')
+        unlawful.append('No frequency specified — how often provision is delivered is not stated. The SEND Code of Practice requires provision to be specified and quantified. Without frequency this provision cannot be monitored or enforced.')
     if not quant['duration']:
         unlawful.append('No duration specified — the length of each session is not stated. Provision without quantification cannot be measured or challenged at annual review.')
     if not quant['role']:
-        unlawful.append('No deliverer role specified — who provides this provision and at what qualification or training level is not stated.')
+        unlawful.append('No deliverer role specified — who provides this provision and at what qualification or training level is not stated. A lawful duty requires a named responsible role, not just a description of activity.')
 
     patterns = []
     if universal:
-        patterns.append('Universal provision identified — this entry describes what the school is already required to provide all pupils. Its presence in Section F creates no additional lawful entitlement specific to this child.')
+        patterns.append('Universal provision identified — this entry describes what the school is already required to provide all pupils. Its presence in Section F creates no additional lawful entitlement specific to this child. Section F must contain provision above and beyond the school\'s universal offer.')
     if laundering:
-        patterns.append('Recommendation laundering identified — assessment language has been copied into Section F without being converted into a specified lawful commitment.')
+        patterns.append('Recommendation laundering identified — assessment or report language has been copied into Section F without being converted into a specified lawful commitment. Referencing the existence of professional advice without acting on it creates no enforceable duty under the Children and Families Act 2014.')
     if dilution:
-        patterns.append('Dilution clause identified — wording allows this provision to be shared or made conditional on school resources. An individual statutory entitlement cannot be diluted at the school\'s discretion.')
+        patterns.append('Dilution clause identified — wording allows this provision to be shared or made conditional on school resources or staffing. An individual statutory entitlement cannot be diluted at the school\'s discretion.')
 
     best_practice = []
     if not quant['named_individual']:
-        best_practice.append('No named accountable person — the lawful requirement is that the deliverer role and training level are specified. As best practice, naming the SENCO as the accountable person supports continuity and makes monitoring easier to evidence. This is a wellbeing recommendation, not a lawful requirement.')
+        best_practice.append(
+            'No named accountable person — the lawful requirement is that the deliverer role '
+            'and training level are specified. As a best practice consideration, naming the '
+            'SENCO as the accountable person supports continuity and makes monitoring easier '
+            'to evidence at annual review and at inspection. '
+            'This is a wellbeing recommendation, not a lawful requirement.'
+        )
     if not re.search(r'\b(review|reviewed|assess|monitor|evaluated)\b', entry_text, re.IGNORECASE):
-        best_practice.append('No review mechanism stated — provision without a stated review mechanism cannot be assessed for effectiveness.')
+        best_practice.append('No review mechanism stated — provision without a stated review mechanism cannot be assessed for effectiveness. Consider asking at annual review how the effectiveness of this provision is assessed and recorded.')
 
     required = []
     if not compliant:
@@ -675,7 +548,7 @@ def audit_entry(entry_text, entry_number, policy_text=''):
             'showing date, duration, who delivered, and any relevant observations. '
             'This is the evidence base for the Do stage of the school\'s statutory '
             'APDR (Assess, Plan, Do, Review) cycle. Without it the Review stage '
-            'cannot be conducted accurately.'
+            'cannot be conducted accurately and the cycle breaks down.'
         )
 
     tactical = [
@@ -700,7 +573,7 @@ def audit_entry(entry_text, entry_number, policy_text=''):
         'unlawful_deficiencies': unlawful,
         'additional_patterns': patterns,
         'best_practice_gaps': best_practice,
-        'ofsted_principle': get_ofsted_principle(entry_text),
+        'ofsted_principle': get_ofsted(entry_text),
         'policy_gaps': policy_gaps,
         'required_specification': required,
         'tactical_advice': tactical,
@@ -717,19 +590,19 @@ def audit_section_e(text):
         unlawful = []
         bp = []
         if not re.search(r'\b(currently|baseline|starting point|at present|now)\b', ol):
-            unlawful.append('No baseline stated — without a starting point progress cannot be objectively measured at annual review.')
+            unlawful.append('No baseline stated — without a starting point progress cannot be objectively measured at annual review. The SEND Code of Practice requires outcomes to be measurable.')
         if not re.search(r'\b(\d+|percentage|score|level|times|independently|consistently|measured by|assessed)\b', ol):
             unlawful.append('No measurable indicator — success cannot be objectively assessed. An outcome without a measurable indicator cannot be reviewed under the APDR cycle.')
         if not re.search(r'\b(by|within|term|year|month|weeks?|annual review|end of)\b', ol):
-            bp.append('No timeframe stated — when this outcome should be achieved is not specified. This supports effective APDR cycle review.')
+            bp.append('No timeframe stated — when this outcome should be achieved is not specified. This supports effective APDR cycle review and annual review preparation.')
         results.append({'outcome_number': i+1, 'outcome_text': outcome, 'unlawful_failures': unlawful, 'best_practice_gaps': bp})
     return results
 
 # ─────────────────────────────────────────────
-# CORRESPONDENCE ANALYSIS
+# CORRESPONDENCE ENGINE
 # ─────────────────────────────────────────────
 
-UNENFORCEABLE_EMAIL_LANGUAGE = [
+UNENFORCEABLE_EMAIL = [
     ('in place', 'Claims provision is in place without referencing any delivery record'),
     ('regularly', '"Regularly" is unmeasurable — frequency must be stated'),
     ('as outlined', 'References the plan without evidencing delivery'),
@@ -750,7 +623,7 @@ def analyse_correspondence(email_text, ehcp_sections, transcript_text=''):
     }
     el = email_text.lower()
 
-    for term, exp in UNENFORCEABLE_EMAIL_LANGUAGE:
+    for term, exp in UNENFORCEABLE_EMAIL:
         if term in el:
             analysis['unenforceable_claims'].append(
                 f'"{term}" — {exp}. A delivery log is required to substantiate this claim. Lack of evidence is evidence of lack.'
@@ -795,7 +668,7 @@ def analyse_correspondence(email_text, ehcp_sections, transcript_text=''):
                 analysis['contradictions_with_transcript'].append(
                     'Adult support — the transcript records that support is provided by different adults across the day without a named accountable person. The email presents full-time support as a consistent guaranteed provision. Please confirm in writing the roles, training, and accountability arrangements for all adults providing support.'
                 )
-        if ('mostly mornings' in tl or ('mornings' in tl and 'transitions' in tl)):
+        if 'mostly mornings' in tl or ('mornings' in tl and 'transitions' in tl):
             if 'consistently across' in el or 'embedded consistently' in el:
                 analysis['contradictions_with_transcript'].append(
                     'Visual supports — the transcript describes use as mostly during mornings and transitions. The email states these are embedded consistently across the day. Please clarify which is accurate and provide the delivery record.'
@@ -812,19 +685,16 @@ def generate_post_meeting_email(analysis, answers):
         'Rights-based and formal': 'We write further to the meeting and your subsequent correspondence. The following sets out our understanding of what was discussed and what outstanding matters require a written response.',
     }
     parts = [openings.get(tone, openings['Constructive but cautious']), '']
-
     if analysis['contradictions_with_transcript'] or analysis['deflected_items']:
         parts.append('What requires a written response\n')
         for c in analysis['contradictions_with_transcript']:
             parts.append(c + '\n')
         for d in analysis['deflected_items']:
             parts.append(d + '\n')
-
     if analysis['addressed_items']:
         parts.append('Provision referenced — delivery log requested\n')
         for a in analysis['addressed_items']:
             parts.append(f'— {a.split(" — ")[0]}')
-
     parts.append('')
     parts.append(
         'Please let us know within five working days if anything above does not reflect '
@@ -837,39 +707,85 @@ def generate_post_meeting_email(analysis, answers):
 # RENDER FUNCTIONS
 # ─────────────────────────────────────────────
 
+def render_traffic_legend():
+    st.markdown(f"""
+    <div class="fred-traffic-legend">
+        <div class="fred-traffic-title">Here is how FRED colour codes its findings</div>
+        <div class="fred-trow">
+            <div class="fred-tdot tdot-red"></div>
+            <div class="fred-ttext">
+                <strong>Red — lawful requirement not met.</strong>
+                The provision does not meet the statutory standard set by the
+                Children and Families Act 2014. Must be addressed at annual review.
+            </div>
+        </div>
+        <div class="fred-trow">
+            <div class="fred-tdot tdot-amber"></div>
+            <div class="fred-ttext">
+                <strong>Amber — best practice gap.</strong>
+                Meets the minimum lawful standard but falls short of what good
+                practice recommends. Worth raising at annual review.
+            </div>
+        </div>
+        <div class="fred-trow">
+            <div class="fred-tdot tdot-green"></div>
+            <div class="fred-ttext">
+                <strong>Green — compliant.</strong>
+                Meets the lawful standard. Use compliant entries as the
+                benchmark when challenging non-compliant ones.
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_sneak_peek(result):
+    entry_preview = result['entry_text'][:200]
+    unlawful = result['unlawful_deficiencies'][:3]
+    count_remaining = max(0, (len(st.session_state.report_results) - 1))
+
+    st.markdown(f"""
+    <div class="fred-sneak-header">FRED has read your plan — here is one finding</div>
+    <div class="fred-sneak-body">
+        <div class="fred-sneak-entry">"{entry_preview}{'...' if len(result['entry_text']) > 200 else ''}"</div>
+        {''.join(f'<div class="unlawful-flag">⚠ {d}</div>' for d in unlawful)}
+        <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
+        <div class="evidence-line">Lack of evidence is evidence of lack.</div>
+    </div>
+    <div class="fred-sneak-more">
+        <div class="fred-sneak-count">This is one entry from Section F of your plan</div>
+        <div class="fred-sneak-sub">Your full report covers every provision entry across Section F and Section E outcomes — with tactical advice and required specification for each finding.</div>
+        <div class="fred-sneak-ready">Your report is ready.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 def render_correspondence(analysis, post_meeting_email):
     st.markdown("## Correspondence analysis")
-
     if analysis['contradictions_with_transcript']:
         st.markdown("### Contradictions — transcript vs email")
         st.markdown("*The following claims in the email are not consistent with what the transcript records.*")
         for c in analysis['contradictions_with_transcript']:
             st.markdown(f'<div class="contradiction-flag">⚠ {c}</div>', unsafe_allow_html=True)
         st.markdown('<div class="evidence-line">Lack of evidence is evidence of lack.</div>', unsafe_allow_html=True)
-
     if analysis['unenforceable_claims']:
         st.markdown("### Unsubstantiated claims in email")
         for u in analysis['unenforceable_claims']:
             st.markdown(f'<div class="unlawful-flag">⚠ {u}</div>', unsafe_allow_html=True)
-
     if analysis['deflected_items']:
         st.markdown("### Provision not addressed in email")
         for d in analysis['deflected_items']:
             st.markdown(f'<div class="bestpractice-flag">◉ {d}</div>', unsafe_allow_html=True)
-
     if analysis['addressed_items']:
         st.markdown("### Provision referenced — delivery log required")
         for a in analysis['addressed_items']:
             st.markdown(f'<div class="tactical-flag">→ {a}</div>', unsafe_allow_html=True)
-
     st.markdown("---")
     st.markdown("### Post-meeting summary email")
     st.markdown("*Send this within 24 hours. The school has five working days to correct anything. Silence is acceptance.*")
-    st.text_area("Copy and send:", value=post_meeting_email, height=380, key="post_meeting_output")
+    st.text_area("Copy and send:", value=post_meeting_email, height=360, key="post_meeting_output")
 
-def render_audit(audit_results, section_e_results, answers):
+def render_full_report(report_results, section_e_results, answers):
     st.markdown("---")
-    st.markdown("## FRED audit report")
+    st.markdown("## Your FRED report")
 
     ehcp_status = answers.get('q2', 'Unknown')
     process_stage = answers.get('q3', 'Not specified')
@@ -888,33 +804,7 @@ def render_audit(audit_results, section_e_results, answers):
             "raise at annual review — not changes to the current document."
         )
 
-    # Traffic light legend on results page
-    st.markdown(f"""
-    <div class="fred-traffic-legend">
-        <div class="fred-traffic-legend-title">Traffic light key</div>
-        <div class="fred-trow">
-            <div class="fred-tdot" style="background:{RED}"></div>
-            <div style="font-size:13px;color:#2C3E50;line-height:1.5;">
-                <strong style="color:#1A252F;">Red — lawful requirement not met.</strong>
-                Must be addressed at annual review.
-            </div>
-        </div>
-        <div class="fred-trow">
-            <div class="fred-tdot" style="background:{AMBER}"></div>
-            <div style="font-size:13px;color:#2C3E50;line-height:1.5;">
-                <strong style="color:#1A252F;">Amber — best practice gap.</strong>
-                Meets minimum lawful standard. Worth raising at annual review.
-            </div>
-        </div>
-        <div class="fred-trow">
-            <div class="fred-tdot" style="background:{GREEN}"></div>
-            <div style="font-size:13px;color:#2C3E50;line-height:1.5;">
-                <strong style="color:#1A252F;">Green — compliant.</strong>
-                Meets the lawful standard. Use as benchmark for non-compliant entries.
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_traffic_legend()
 
     if section_e_results:
         st.markdown("### Section E — Outcomes")
@@ -937,11 +827,11 @@ def render_audit(audit_results, section_e_results, answers):
                 </div>""", unsafe_allow_html=True)
         st.markdown("---")
 
-    if audit_results:
+    if report_results:
         st.markdown("### Section F — Provision")
-        unlawful_count = sum(1 for r in audit_results if r['unlawful_deficiencies'] or r['additional_patterns'])
-        compliant_count = sum(1 for r in audit_results if r['is_compliant'])
-        total = len(audit_results)
+        unlawful_count = sum(1 for r in report_results if r['unlawful_deficiencies'] or r['additional_patterns'])
+        compliant_count = sum(1 for r in report_results if r['is_compliant'])
+        total = len(report_results)
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Total entries", total)
@@ -951,7 +841,7 @@ def render_audit(audit_results, section_e_results, answers):
         c3.metric("Compliant", compliant_count)
         st.markdown("<br>", unsafe_allow_html=True)
 
-        for result in audit_results:
+        for result in report_results:
             if result['is_compliant']:
                 st.markdown(f"""
                 <div class="audit-header-green">Provision {result['entry_number']} — compliant</div>
@@ -968,7 +858,6 @@ def render_audit(audit_results, section_e_results, answers):
                 <div class="audit-body">
                 <em>"{result['entry_text'][:300]}{'...' if len(result['entry_text']) > 300 else ''}"</em><br><br>
                 """, unsafe_allow_html=True)
-
                 if result['unlawful_deficiencies']:
                     st.markdown("**Lawful requirements not met**")
                     for d in result['unlawful_deficiencies']:
@@ -1004,9 +893,8 @@ def render_audit(audit_results, section_e_results, answers):
                     """, unsafe_allow_html=True)
                 st.markdown("</div><br>", unsafe_allow_html=True)
 
-        st.info("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference Audit.")
+        st.info("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.")
 
-    # Annual review date capture
     st.markdown(f"""
     <div class="review-capture">
         <strong>Hold this for your annual review.</strong><br>
@@ -1016,10 +904,9 @@ def render_audit(audit_results, section_e_results, answers):
     """, unsafe_allow_html=True)
     st.date_input("Annual review date (optional):", key="review_date")
 
-    # Subscription signal
     unlawful_total = sum(
         len(r['unlawful_deficiencies']) + len(r['additional_patterns'])
-        for r in audit_results
+        for r in report_results
     )
     if unlawful_total > 0:
         st.markdown(f"""
@@ -1038,7 +925,7 @@ def render_audit(audit_results, section_e_results, answers):
 # DOCUMENT GENERATION
 # ─────────────────────────────────────────────
 
-def generate_docx(audit_results, section_e_results, answers):
+def generate_docx(report_results, section_e_results, answers):
     doc = DocxDocument()
     RED_C = RGBColor(0xC0, 0x39, 0x2B)
     AMBER_C = RGBColor(0xD4, 0xA0, 0x17)
@@ -1064,13 +951,12 @@ def generate_docx(audit_results, section_e_results, answers):
     t = doc.add_paragraph()
     t.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = t.add_run("FRED")
-    r.font.size = Pt(36); r.font.bold = True
-    r.font.color.rgb = BLUE_C
+    r.font.size = Pt(36); r.font.bold = True; r.font.color.rgb = BLUE_C
 
     s = doc.add_paragraph()
     s.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    s.add_run("Families' Rights and Entitlements Directory — EHCP Audit Report").font.color.rgb = RGBColor(0x2E, 0x86, 0xC1)
-    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.4")
+    s.add_run("Families' Rights and Entitlements Directory — EHCP Report").font.color.rgb = RGBColor(0x2E, 0x86, 0xC1)
+    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.5")
     doc.add_paragraph("FRED provides information to help you understand the language of your child's plan and what the law says about it. It does not constitute legal advice.")
     doc.add_page_break()
 
@@ -1081,7 +967,7 @@ def generate_docx(audit_results, section_e_results, answers):
     doc.add_paragraph()
 
     if section_e_results:
-        h("Section E — Outcomes audit")
+        h("Section E — Outcomes")
         for r_ in section_e_results:
             c_ = RED_C if r_['unlawful_failures'] else (AMBER_C if r_['best_practice_gaps'] else GREEN_C)
             h(f"Outcome {r_['outcome_number']}", level=2, c=c_)
@@ -1094,9 +980,9 @@ def generate_docx(audit_results, section_e_results, answers):
                 p("✓ Meets SMART criteria.", GREEN_C)
         doc.add_page_break()
 
-    if audit_results:
-        h("Section F — Provision audit")
-        for result in audit_results:
+    if report_results:
+        h("Section F — Provision")
+        for result in report_results:
             c_ = (GREEN_C if result['is_compliant']
                  else RED_C if result['unlawful_deficiencies']
                  else AMBER_C)
@@ -1146,7 +1032,7 @@ def generate_docx(audit_results, section_e_results, answers):
     buf.seek(0)
     return buf
 
-def generate_pdf(audit_results, section_e_results, answers):
+def generate_pdf(report_results, section_e_results, answers):
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
                            rightMargin=20*mm, leftMargin=20*mm,
@@ -1178,7 +1064,7 @@ def generate_pdf(audit_results, section_e_results, answers):
     story.append(Paragraph("FRED", ps('TT', 'Title', textColor=brand, fontSize=32)))
     story.append(Paragraph("Families' Rights and Entitlements Directory", h1))
     story.append(Spacer(1, 5*mm))
-    story.append(Paragraph(f"EHCP Audit Report | Status: {answers.get('q2','Unknown')} | Beta v0.4", body))
+    story.append(Paragraph(f"EHCP Report | Status: {answers.get('q2','Unknown')} | Beta v0.5", body))
     story.append(Paragraph("This report provides information to help you understand the language of your child's plan and what the law says about it. It does not constitute legal advice.", body))
     story.append(Spacer(1, 4*mm))
     story.append(Paragraph("Output key", h1))
@@ -1188,7 +1074,7 @@ def generate_pdf(audit_results, section_e_results, answers):
     story.append(Spacer(1, 5*mm))
 
     if section_e_results:
-        story.append(Paragraph("Section E — Outcomes audit", h1))
+        story.append(Paragraph("Section E — Outcomes", h1))
         for r_ in section_e_results:
             h_ = h2r if r_['unlawful_failures'] else (h2a if r_['best_practice_gaps'] else h2g)
             story.append(Paragraph(f"Outcome {r_['outcome_number']}", h_))
@@ -1201,9 +1087,9 @@ def generate_pdf(audit_results, section_e_results, answers):
                 story.append(Paragraph("✓ Meets SMART criteria.", grn_s))
             story.append(Spacer(1, 3*mm))
 
-    if audit_results:
-        story.append(Paragraph("Section F — Provision audit", h1))
-        for result in audit_results:
+    if report_results:
+        story.append(Paragraph("Section F — Provision", h1))
+        for result in report_results:
             h_ = (h2g if result['is_compliant']
                  else h2r if result['unlawful_deficiencies']
                  else h2a)
@@ -1245,22 +1131,60 @@ def generate_pdf(audit_results, section_e_results, answers):
             story.append(Spacer(1, 5*mm))
 
     story.append(Spacer(1, 6*mm))
-    story.append(Paragraph("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference Audit.", tac_s))
+    story.append(Paragraph("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.", tac_s))
     doc.build(story)
     buf.seek(0)
     return buf
 
 # ─────────────────────────────────────────────
-# APP FLOW
+# SURVEY
 # ─────────────────────────────────────────────
 
-# ══════════════════════════════════════════════
-# STAGE: LANDING
-# ══════════════════════════════════════════════
+def render_survey():
+    st.markdown("---")
+    st.markdown("### Beta feedback")
+    st.markdown("Takes about two minutes. Every answer goes directly to the team building FRED.")
 
-if st.session_state.stage == 'landing':
+    with st.form("feedback_form"):
+        st.selectbox("Did the report identify anything you did not already know?",
+            ["Yes — significantly", "Yes — partially", "No — I knew this already"])
+        st.selectbox("Did the traffic light system make sense?",
+            ["Yes — very clear", "Mostly clear", "Confusing", "Not sure"])
+        st.selectbox("Does the layout feel simple and easy to follow?",
+            ["Yes — very simple", "Mostly", "Could be simpler", "No"])
+        st.selectbox("How does it look to you?",
+            ["Clean and professional", "Fine but nothing special", "Needs more personality", "Not sure"])
+        st.selectbox(
+            "Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
+            ["Yes — colour theme", "Yes — text size", "Yes — both", "Not bothered", "No"])
+        st.selectbox("Would you pay for the one-off report?",
+            ["Yes — definitely", "Possibly", "Not sure", "No"])
+        st.text_input("What feels like a fair price for the full report?",
+            placeholder="e.g. £25, £35, £50...")
+        st.selectbox(
+            "Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
+            ["Yes — definitely", "Possibly", "Not sure", "No"])
+        st.text_input("What would feel like a fair monthly price?",
+            placeholder="e.g. £10, £15, £20 per month...")
+        st.text_area("Anything else — what worked, what did not, what is missing?", height=80)
 
-    # Nav
+        st.markdown("---")
+        st.markdown("**Would you like to be notified when FRED launches?**")
+        notify = st.radio("", ["Yes — notify me", "No thank you"],
+                         horizontal=True, label_visibility="collapsed")
+
+        submitted = st.form_submit_button("Submit feedback")
+        if submitted:
+            st.success(
+                "Thank you. Your feedback has been received. "
+                "It directly informs the next version of FRED."
+            )
+
+# ─────────────────────────────────────────────
+# LANDING PAGE
+# ─────────────────────────────────────────────
+
+def render_landing():
     st.markdown(f"""
     <div class="fred-nav">
         <div class="fred-nav-logo">FRED</div>
@@ -1270,345 +1194,208 @@ if st.session_state.stage == 'landing':
             <span class="fred-nav-link">About</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
-
-    # Beta bar
-    st.markdown("""
-    <div class="fred-beta-bar">
-        Beta — design and functionality are actively being developed.
-        Your feedback shapes the final product.
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Hero
-    st.markdown(f"""
+    <div class="fred-beta">Beta — design and functionality are actively being developed. Your feedback shapes the final product.</div>
     <div class="fred-hero">
-        <div class="fred-hero-eyebrow">Families' Rights and Entitlements Directory</div>
-        <div class="fred-hero-title">
-            Your child's plan should<br>work for <span>your child.</span>
-        </div>
-        <div class="fred-hero-origin">
-            Built by a parent who learned the hard way — so you don't have to.
-        </div>
-        <div class="fred-hero-sub">
-            FRED reads your child's EHCP, identifies every provision that isn't
-            lawfully enforceable, and tells you exactly what to do about it —
-            in plain language, at any hour.
-        </div>
+        <div class="fred-big">FRED</div>
+        <div class="fred-full">Families' Rights and Entitlements Directory</div>
+        <div class="fred-hero-title">Your child's plan should work for <span>your child.</span></div>
+        <div class="fred-hero-origin">Built by a parent who learned the hard way — so you don't have to.</div>
+        <div class="fred-hero-sub">FRED reads your child's EHCP, identifies every provision that isn't lawfully enforceable, and tells you exactly what to do about it — in plain language, at any hour.</div>
+        <div class="fred-hero-flex">Our service is flexible — either a <span>one-off report on your EHCP and provision</span> or a <span>full subscription</span> that holds your child's complete journey.</div>
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Get my audit →", key="hero_audit"):
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("📋  Get my report", key="hero_get_report"):
             st.session_state.stage = 'upload'
             st.rerun()
-    with col2:
-        if st.button("See full service →", key="hero_sub"):
-            st.session_state.stage = 'full_service'
-            st.rerun()
 
-    # How it works
-    st.markdown("""
-    <div class="fred-section">
-        <div class="fred-section-label">How Fred works</div>
-        <div class="fred-section-title">Upload and go.</div>
-        <div class="fred-section-sub">
-            FRED works with whatever you have.
-            You don't need everything — just start with what's in front of you.
-        </div>
-        <div class="fred-step">
-            <div class="fred-step-num">1</div>
-            <div>
-                <div class="fred-step-title">Upload and go</div>
-                <div class="fred-step-desc">
-                    Drop in your EHCP, EP report, or any school document as a PDF or Word file.
-                    FRED reads it instantly and asks five short questions to understand your situation —
-                    draft or final plan, upcoming dates, how things stand with the school.
-                    No copy and paste. No technical knowledge. Works with whatever you have.
-                </div>
-                <span class="fred-step-tag tag-audit">One-off audit</span>
-            </div>
-        </div>
-        <div class="fred-step">
-            <div class="fred-step-num">2</div>
-            <div>
-                <div class="fred-step-title">Receive your audit</div>
-                <div class="fred-step-desc">
-                    Every provision entry is assessed against the Children and Families Act 2014.
-                    Red means it must be addressed. Amber means it falls short of best practice.
-                    Green means it holds up. Plain explanations throughout — no jargon.
-                    Download as Word or PDF.
-                </div>
-                <span class="fred-step-tag tag-audit">One-off audit</span>
-            </div>
-        </div>
-        <div class="fred-step">
-            <div class="fred-step-num">3</div>
-            <div>
-                <div class="fred-step-title">FRED holds the journey from here</div>
-                <div class="fred-step-desc">
-                    Email support drafted and calibrated to your relationship with the school.
-                    Meeting preparation with a script you can read in the room.
-                    Post-meeting summaries that turn verbal promises into written commitments.
-                    Annual review preparation built from everything FRED has held since day one.
-                </div>
-                <span class="fred-step-tag tag-sub">Full service</span>
-            </div>
-        </div>
+    st.markdown(f"""
+    <div class="fred-hero-cta">
+        <div class="fred-btn-reassure">Upload first. Decide after. Your report is ready before you pay.</div>
+        <div class="fred-btn-pricing">From £XX for the full report — or <span onclick="">see our subscription plans</span></div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Traffic lights
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="fred-section">
+        <div class="fred-sec-label">How it works</div>
+        <div class="fred-sec-title">Everything you need to know.</div>
+        <ul class="fred-bullets">
+            <li><span class="fred-bdot"></span>Gather your EHCP, EP report, or any school document — PDF or Word is fine</li>
+            <li><span class="fred-bdot"></span>Answer five short questions about your situation — draft or final plan, upcoming dates, how things stand with the school</li>
+            <li><span class="fred-bdot"></span>Receive a full report — every provision assessed against the Children and Families Act 2014, the SEND Code of Practice 2015, and your school's own policy where provided</li>
+            <li><span class="fred-bdot"></span>Download your report as Word or PDF, whichever works for you</li>
+            <li><span class="fred-bdot"></span><span>Then with a subscription you can add school emails, meeting transcripts, and specialist reports to <span class="fred-sub-bullet">build the complete picture</span></span></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("📋  Get my report", key="how_get_report"):
+            st.session_state.stage = 'upload'
+            st.rerun()
+    st.markdown('<div class="fred-upload-wrap"><span class="fred-upload-note">PDF or Word · processed privately · not stored or shared</span></div>', unsafe_allow_html=True)
+
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
     st.markdown(f"""
     <div class="fred-section">
-        <div class="fred-section-label">The traffic light system</div>
-        <div class="fred-section-title">You'll always know where you stand.</div>
-        <div class="fred-section-sub">
-            Every finding is colour coded so you can see at a glance what matters most.
-        </div>
-        <div class="fred-traffic-box">
-            <div class="fred-traffic-row">
-                <div class="fred-dot dot-red"></div>
-                <div class="fred-traffic-text">
-                    <strong>Red — lawful requirement not met.</strong>
-                    The provision does not meet the statutory standard set by the
-                    Children and Families Act 2014. This must be addressed at your next annual review.
-                </div>
+        <div class="fred-sec-label" style="text-align:center;">The traffic light system</div>
+        <div class="fred-sec-title">You'll always know where you stand.</div>
+        <div class="fred-sec-sub">Every finding is colour coded so you can see at a glance what matters most.</div>
+        <div class="fred-traffic-legend">
+            <div class="fred-trow">
+                <div class="fred-tdot tdot-red"></div>
+                <div class="fred-ttext"><strong>Red — lawful requirement not met.</strong> The provision does not meet the statutory standard set by the Children and Families Act 2014. Must be addressed at annual review.</div>
             </div>
-            <div class="fred-traffic-row">
-                <div class="fred-dot dot-amber"></div>
-                <div class="fred-traffic-text">
-                    <strong>Amber — best practice gap.</strong>
-                    The provision meets the minimum lawful standard but falls short of what
-                    good practice recommends for your child's specific needs.
-                    Worth raising at annual review.
-                </div>
+            <div class="fred-trow">
+                <div class="fred-tdot tdot-amber"></div>
+                <div class="fred-ttext"><strong>Amber — best practice gap.</strong> Meets the minimum lawful standard but falls short of what good practice recommends. Worth raising at annual review.</div>
             </div>
-            <div class="fred-traffic-row">
-                <div class="fred-dot dot-green"></div>
-                <div class="fred-traffic-text">
-                    <strong>Green — compliant.</strong>
-                    This provision meets the lawful standard.
-                    Use compliant entries as the benchmark when challenging non-compliant ones.
-                </div>
+            <div class="fred-trow">
+                <div class="fred-tdot tdot-green"></div>
+                <div class="fred-ttext"><strong>Green — compliant.</strong> Meets the lawful standard. Use compliant entries as the benchmark when challenging non-compliant ones.</div>
             </div>
-        </div>
-        <div class="fred-traffic-note">
-            Red and amber findings include specific tactical advice and a required specification —
-            so you know not just what is wrong but exactly what to ask for instead.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Pricing
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
     st.markdown("""
     <div class="fred-section">
-        <div class="fred-section-label">Pricing</div>
-        <div class="fred-section-title">Start with what you need.</div>
-        <div class="fred-section-sub">
-            No free tier. No hidden upgrades. Every route includes the audit your case is built on.
-        </div>
+        <div class="fred-sec-label" style="text-align:center;">Pricing</div>
+        <div class="fred-sec-title" style="text-align:center;">Start with what you need.</div>
+        <div class="fred-sec-sub">No hidden charges. Your report is ready before you purchase. Every route includes the full report.</div>
         <div class="fred-pricing-grid">
             <div class="fred-price-card">
-                <div class="fred-price-name">One-off audit</div>
+                <div class="fred-price-name">One-off report</div>
                 <div class="fred-price-amount">£XX</div>
-                <div class="fred-price-period">single payment, no commitment</div>
+                <div class="fred-price-period">single purchase · no commitment</div>
                 <ul class="fred-price-features">
-                    <li>Full Section F enforceability audit</li>
+                    <li>Full Section F enforceability report</li>
                     <li>Section E SMART outcomes check</li>
                     <li>Traffic light findings — red, amber, green</li>
                     <li>Tactical advice for every finding</li>
-                    <li>Downloadable report — Word and PDF</li>
+                    <li>Downloadable — Word and PDF</li>
                 </ul>
-                <button class="fred-price-btn">Get my audit</button>
             </div>
             <div class="fred-price-card featured">
                 <div class="fred-price-badge">Best value</div>
                 <div class="fred-price-name">Annual subscription</div>
                 <div class="fred-price-amount">£XX</div>
-                <div class="fred-price-period">per year — less than £X per week</div>
-                <div class="fred-price-first">Includes your audit. Everything from day one.</div>
+                <div class="fred-price-period">per year · less than £X per week</div>
+                <div class="fred-price-first">Includes your report from day one. Year two at a reduced renewal rate.</div>
                 <ul class="fred-price-features">
-                    <li>Full audit included</li>
-                    <li>Document vault — all documents held and cross-referenced</li>
-                    <li>Email support — drafted and calibrated to your situation</li>
-                    <li>Meeting preparation — agenda, briefing, and script</li>
+                    <li>Full report included</li>
+                    <li>Document vault — all documents held</li>
+                    <li>Email support — drafted and calibrated</li>
+                    <li>Meeting preparation and script</li>
                     <li>Post-meeting summary emails</li>
                     <li>Annual review preparation pack</li>
                     <li>School transition support</li>
-                    <li>Annual review date reminder</li>
                 </ul>
-                <button class="fred-price-btn primary">Start full service</button>
             </div>
             <div class="fred-price-card">
                 <div class="fred-price-name">Monthly</div>
                 <div class="fred-price-amount">£XX</div>
-                <div class="fred-price-period">per month from month two<br>cancel anytime</div>
-                <div class="fred-price-first">First month £XX — includes your audit. Then £XX per month ongoing.</div>
+                <div class="fred-price-period">per month from month two · cancel anytime</div>
+                <div class="fred-price-first">First month £XX — includes your report.</div>
                 <ul class="fred-price-features">
-                    <li>Audit included in first month</li>
+                    <li>Report included in first month</li>
                     <li>Everything in the full service</li>
                     <li>No annual commitment</li>
                     <li>Cancel anytime</li>
                 </ul>
-                <button class="fred-price-btn">Start monthly</button>
             </div>
         </div>
-        <div class="fred-pricing-note">
-            Prices shown as placeholders — confirmed at launch.
-            Every route includes the audit your case is built on.
-        </div>
+        <div style="font-size:11px;color:#717D7E;text-align:center;font-style:italic;margin-top:8px;">Prices shown as placeholders — confirmed at launch.</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Testimonial
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
     st.markdown("""
     <div class="fred-section">
-        <div class="fred-section-label">From a parent</div>
-        <div class="fred-section-title">You already know something isn't right.</div>
-        <div class="fred-testimonial">
-            <div class="fred-quote">
-                "I spent three years learning what I should have been told on day one.
-                The language in my son's plan looked like provision. It wasn't.
-                FRED would have shown me that in minutes."
-            </div>
+        <div class="fred-sec-label">From a parent</div>
+        <div class="fred-sec-title">You already know something isn't right.</div>
+        <div class="fred-quote-box">
+            <div class="fred-quote">"I spent three years learning what I should have been told on day one. The language in my son's plan looked like provision. It wasn't. FRED would have shown me that in minutes."</div>
             <div class="fred-quote-attr">— Founder, FRED</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # FAQ
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
     st.markdown("""
     <div class="fred-section">
-        <div class="fred-section-label">Questions</div>
-        <div class="fred-section-title">Straightforward answers.</div>
+        <div class="fred-sec-label">Questions</div>
+        <div class="fred-sec-title">Straightforward answers.</div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Is FRED legal advice?</div>
-            <div class="fred-faq-a">
-                No. FRED provides information to help you understand the language of your child's
-                plan and what the law says about it. It does not replace a solicitor or independent
-                advocate. All guidance is referenced to the Children and Families Act 2014 and the
-                SEND Code of Practice 2015. Where you upload a school SEND policy, behaviour policy,
-                or accessibility plan, FRED cross-references the school's own stated commitments
-                against the provision in the plan. The school cannot dispute its own policy.
-            </div>
+            <div class="fred-faq-a">No. FRED provides information to help you understand the language of your child's plan and what the law says about it. It does not replace a solicitor or independent advocate. All guidance is referenced to the Children and Families Act 2014 and the SEND Code of Practice 2015. Where you upload a school policy or accessibility plan, FRED cross-references the school's own commitments against the provision in the plan.</div>
+        </div>
+        <div class="fred-faq-item">
+            <div class="fred-faq-q">When do I pay?</div>
+            <div class="fred-faq-a">After FRED has read your plan and you have seen a preview of what it found. You upload first, see a finding from your plan, then decide whether to purchase the full report. Nothing is charged until you choose to proceed.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Is my data private?</div>
-            <div class="fred-faq-a">
-                Yes. When you use the one-off audit your document is read and processed during your
-                session only. It is not saved, stored, or retained after your session ends.
-                In the full service your documents are held in your own private vault —
-                accessible only to you, never visible to other users or third parties.
-            </div>
+            <div class="fred-faq-a">Yes. For the one-off report your document is read during your session only — not stored or retained. In the full service your documents are held in your own private vault, accessible only to you.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">What if I don't have an EHCP yet?</div>
-            <div class="fred-faq-a">
-                FRED also works with EP reports, OT reports, SALT reports, and school correspondence.
-                If you are at the needs assessment stage or have had an assessment refused,
-                FRED can show you what the Children and Families Act 2014 says about your situation
-                and what questions to ask. It does not tell you what to do — it makes sure you
-                have the right information.
-            </div>
+            <div class="fred-faq-a">FRED works with EP reports, OT reports, SALT reports, and school correspondence. If you are at the needs assessment stage or have had an assessment refused, FRED can show you what the Children and Families Act 2014 says about your situation and what questions to ask.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">What documents can I upload?</div>
-            <div class="fred-faq-a">
-                Any PDF or Word document — EHCP, EP report, OT report, SALT report, school emails
-                saved as PDF, meeting notes or transcripts, school SEND policy, behaviour policy,
-                or accessibility plan. FRED reads them all and cross-references where relevant.
-            </div>
-        </div>
-        <div class="fred-faq-item">
-            <div class="fred-faq-q">Does it work on my phone?</div>
-            <div class="fred-faq-a">
-                Yes. FRED works in any browser on any device — iPhone, Android, tablet, or desktop.
-                No app to download. A dedicated app is planned for a future release.
-            </div>
+            <div class="fred-faq-a">Any PDF or Word document — EHCP, EP report, OT report, school emails saved as PDF, meeting transcripts, school SEND policy, behaviour policy, or accessibility plan.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Can I cancel my subscription?</div>
-            <div class="fred-faq-a">
-                Yes. Monthly subscriptions can be cancelled at any time. If you resubscribe later,
-                the first month rate applies again — which includes a fresh audit.
-                Annual subscriptions run for twelve months from the date of payment.
-                Year two renewals are at a reduced rate as the audit is not repeated.
-            </div>
+            <div class="fred-faq-a">Yes. Monthly subscriptions cancel anytime. Resubscribing resets to the first month rate which includes a fresh report. Annual subscriptions run twelve months. Year two renewals are at a reduced rate as the report is not repeated.</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Footer
+    st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
+
     st.markdown("""
+    <div style="text-align:center;padding:28px 0;background:var(--color-background-secondary);border-radius:10px;margin:16px 0;">
+        <div style="font-size:17px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px;">Ready to see what your child's plan actually says?</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;">Upload your document. See a finding. Decide after.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("📋  Get my report", key="bottom_get_report"):
+            st.session_state.stage = 'upload'
+            st.rerun()
+
+    st.markdown(f"""
     <div class="fred-footer">
         <div class="fred-footer-logo">FRED</div>
         <div class="fred-footer-text">
             Families' Rights and Entitlements Directory<br>
-            Not legal advice &nbsp;·&nbsp; All data private and secure
-            &nbsp;·&nbsp; Built for families navigating the EHCP process<br><br>
-            Privacy &nbsp;·&nbsp; Terms &nbsp;·&nbsp; Contact
+            Not legal advice · All data private and secure · Built for families navigating the EHCP process<br><br>
+            Privacy · Terms · Contact
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # CTA at bottom
-    st.markdown("---")
-    if st.button("Get started — upload your document →", key="bottom_cta"):
-        st.session_state.stage = 'upload'
-        st.rerun()
+# ─────────────────────────────────────────────
+# APP FLOW
+# ─────────────────────────────────────────────
 
-# ══════════════════════════════════════════════
-# STAGE: FULL SERVICE INFO PAGE
-# ══════════════════════════════════════════════
-
-elif st.session_state.stage == 'full_service':
-
-    st.markdown(f"""
-    <div class="fred-header-bar">
-        <div class="fred-header-title">FRED</div>
-        <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("## The full FRED service")
-    st.markdown(
-        "The subscription is not more of the same audit. "
-        "It is a completely different relationship with the process."
-    )
-
-    services = [
-        ("Document vault", "Every document you upload is held and cross-referenced. An EP report from two years ago sits next to the current EHCP. FRED can see where professional recommendations were dropped between one plan and the next. You do not have to remember. FRED does."),
-        ("Correspondence support", "When a letter or email arrives from the school or LA, you upload it to FRED. FRED reads it against everything held in the vault and tells you what has been addressed, what has been deflected, and what has been ignored. It then drafts a response calibrated to your relationship with the school."),
-        ("Meeting preparation", "When a meeting is approaching FRED generates a full preparation pack — a briefing, a structured agenda, and a script you can read directly in the room. A tick box and notes space for every agenda item. A plain language description of what an acceptable answer looks like for each point."),
-        ("Post-meeting summary", "After the meeting you upload your notes or transcript. FRED generates a summary email to the school. Every vague verbal agreement becomes a specific written commitment with a named person and a named timeframe. The school has five working days to correct anything. Silence is acceptance."),
-        ("Annual review preparation", "FRED has been building toward the annual review since the first document was uploaded. When the review approaches it generates a complete preparation pack — what was promised, what was delivered, what was not, what must be added."),
-        ("Timeline and history", "Everything sits in chronological order. Every document, every email exchange, every meeting, every agreed action. Nothing is lost when staff change, schools change, or caseworkers move on."),
-        ("School transition support", "When a school changes FRED prompts a full document upload and generates a transition summary for the new school. They cannot claim ignorance of what came before."),
-        ("Annual review reminder", "Enter your next review date. FRED begins working with you in the weeks before it. Nothing is left to the last minute."),
-    ]
-
-    for title, desc in services:
-        st.markdown(f"**{title}**")
-        st.markdown(desc)
-        st.markdown("---")
-
-    st.markdown("*FRED is not legal advice and does not replace a solicitor or tribunal advocate. If a situation reaches formal dispute FRED will tell you clearly and point you toward the right support.*")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("← Back to home", key="back_from_service"):
-            st.session_state.stage = 'landing'
-            st.rerun()
-    with col2:
-        if st.button("Get started →", key="service_to_upload"):
-            st.session_state.stage = 'upload'
-            st.rerun()
-
-# ══════════════════════════════════════════════
-# STAGE: UPLOAD
-# ══════════════════════════════════════════════
+if st.session_state.stage == 'landing':
+    render_landing()
 
 elif st.session_state.stage == 'upload':
 
@@ -1617,110 +1404,82 @@ elif st.session_state.stage == 'upload':
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
     <div class="fred-beta-notice">
-        <strong>Beta v0.4</strong> — Design and functionality are actively being developed.
+        <strong>Beta v0.5</strong> — Design and functionality are actively being developed.
         Your feedback shapes the final product. FRED provides information to help you
         understand the language of your child's plan and what the law says about it.
         It does not constitute legal advice.
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### Upload your document")
-    st.markdown(
-        "Upload any document — EHCP, EP report, school email, meeting transcript, "
-        "or school policy. PDF or Word. FRED works out what it is and how to read it."
-    )
+    render_traffic_legend()
+
+    st.markdown("### Get my report")
+    st.markdown("Upload any document — EHCP, EP report, school email, meeting transcript, or school policy. PDF or Word. FRED works out what it is.")
 
     main_file = st.file_uploader(
         "Upload your document",
         type=['pdf', 'docx', 'doc'],
         key='main_upload',
-        help="Your document is read during this session only. Not stored or shared."
+        help="Processed privately during this session only. Not stored or shared."
     )
 
     st.markdown("""
-    <div class="upload-tip">
+    <div class="fred-upload-tip">
         <strong>Email:</strong> Open it, select print, choose Save as PDF.<br>
-        <strong>Password protected document:</strong> Open it, select print, save as PDF —
-        this removes the lock on most LA documents.
+        <strong>Password protected document:</strong> Open it, select print, save as PDF — this removes the lock on most LA documents.
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("Add another document (optional)"):
-        st.markdown(
-            "Upload additional documents — school policy, email, transcript, or specialist report. "
-            "FRED cross-references everything you provide."
-        )
-        extra_file_1 = st.file_uploader(
-            "Additional document", type=['pdf', 'docx', 'doc'], key='extra_1'
-        )
-        extra_file_2 = st.file_uploader(
-            "Another document", type=['pdf', 'docx', 'doc'], key='extra_2'
-        )
-        extra_file_3 = st.file_uploader(
-            "Another document", type=['pdf', 'docx', 'doc'], key='extra_3'
-        )
+    with st.expander("Add another document — school policy, specialist report, email, or transcript (optional)"):
+        st.markdown("FRED cross-references everything you provide. Upload any additional documents here.")
+        extra_1 = st.file_uploader("Additional document", type=['pdf','docx','doc'], key='extra_1')
+        extra_2 = st.file_uploader("Another document", type=['pdf','docx','doc'], key='extra_2')
+        extra_3 = st.file_uploader("Another document", type=['pdf','docx','doc'], key='extra_3')
 
     if main_file:
-        all_texts = {}
-
         with st.spinner("Fred is reading your document..."):
-            text, error = read_uploaded_file(main_file)
+            text, error = read_file(main_file)
             if error:
                 st.error(error)
             else:
+                doc_type = detect_doc_type(text)
                 sections = identify_sections(text)
                 st.session_state.extracted_sections = sections
                 st.session_state.raw_text = text
-                all_texts['main'] = text
 
                 if sections:
                     st.success(
                         f"Document read. "
                         f"Sections identified: {', '.join(sorted(sections.keys()))}. "
-                        f"Key information saved to your review summary."
+                        f"Key information saved to your report summary."
                     )
                 else:
-                    st.warning(
-                        "FRED could not identify standard EHCP sections automatically. "
-                        "You can paste Section F text below to proceed."
-                    )
+                    st.warning("FRED could not identify standard EHCP sections automatically. Paste Section F text below to proceed.")
                     manual_f = st.text_area("Paste Section F provision text here:", height=180)
                     if manual_f:
                         st.session_state.extracted_sections['F'] = manual_f
 
-        for i, extra in enumerate([extra_file_1, extra_file_2, extra_file_3], 1):
+        for i, extra in enumerate([extra_1, extra_2, extra_3], 1):
             if extra:
                 with st.spinner(f"Reading additional document {i}..."):
-                    extra_text, extra_error = read_uploaded_file(extra)
+                    extra_text, extra_error = read_file(extra)
                     if extra_error:
                         st.warning(f"Document {i}: {extra_error}")
                     else:
-                        name_lower = extra.name.lower()
-                        if any(kw in extra_text.lower() for kw in
-                               ['send policy', 'accessibility plan', 'behaviour policy',
-                                'inclusion policy', 'safeguarding']):
+                        dtype = detect_doc_type(extra_text)
+                        if dtype == 'policy':
                             st.session_state.policy_text = extra_text
                             st.success(f"School policy read — ready for cross-reference.")
-                        elif any(kw in extra_text.lower() for kw in
-                                 ['dear', 'kind regards', 'subject:', 'thank you for']):
+                        elif dtype == 'email':
                             st.session_state.email_text = extra_text
                             st.success(f"Email read — ready for correspondence analysis.")
-                        elif any(kw in extra_text.lower() for kw in
-                                 ['speaker', 'transcript', 'meeting', 'yeah', 'um ']):
+                        elif dtype == 'transcript':
                             st.session_state.transcript_text = extra_text
-                            st.success(
-                                f"Transcript read — this is the primary record of what was said. "
-                                f"FRED will cross-reference it against any email."
-                            )
+                            st.success(f"Transcript read — primary record of what was said.")
                         else:
-                            st.session_state.policy_text = (
-                                st.session_state.get('policy_text', '') + ' ' + extra_text
-                            )
-                            st.success(f"Additional document {i} read and added to the analysis.")
+                            st.session_state.policy_text = st.session_state.get('policy_text', '') + ' ' + extra_text
+                            st.success(f"Additional document {i} read and added.")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -1732,10 +1491,6 @@ elif st.session_state.stage == 'upload':
                 st.session_state.stage = 'questions'
                 st.rerun()
 
-# ══════════════════════════════════════════════
-# STAGE: QUESTIONS
-# ══════════════════════════════════════════════
-
 elif st.session_state.stage == 'questions':
 
     st.markdown(f"""
@@ -1746,7 +1501,7 @@ elif st.session_state.stage == 'questions':
     """, unsafe_allow_html=True)
 
     st.markdown("### A few quick questions")
-    st.markdown("These shape the analysis you receive.")
+    st.markdown("These shape the report you receive.")
 
     q1 = st.selectbox("1. What have you uploaded?", options=[
         "My child's EHCP",
@@ -1805,13 +1560,9 @@ elif st.session_state.stage == 'questions':
             st.session_state.stage = 'upload'
             st.rerun()
     with col2:
-        if st.button("Run audit →", key="q_continue"):
+        if st.button("Run report →", key="q_continue"):
             st.session_state.stage = 'processing'
             st.rerun()
-
-# ══════════════════════════════════════════════
-# STAGE: PROCESSING
-# ══════════════════════════════════════════════
 
 elif st.session_state.stage == 'processing':
 
@@ -1829,17 +1580,17 @@ elif st.session_state.stage == 'processing':
     email_text = st.session_state.get('email_text', '')
     transcript_text = st.session_state.get('transcript_text', '')
 
-    audit_results = []
+    report_results = []
     section_e_results = []
     correspondence_analysis = None
     post_meeting_email = ''
 
-    with st.spinner("Auditing Section F provision entries..."):
+    with st.spinner("Reading Section F provision entries..."):
         if 'F' in sections:
-            entries = extract_provision_entries(sections['F'])
+            entries = extract_entries(sections['F'])
             for i, entry in enumerate(entries):
                 if len(entry.strip()) > 20:
-                    audit_results.append(audit_entry(entry, i+1, policy_text))
+                    report_results.append(audit_entry(entry, i+1, policy_text))
 
     with st.spinner("Checking Section E outcomes..."):
         if 'E' in sections:
@@ -1847,23 +1598,66 @@ elif st.session_state.stage == 'processing':
 
     if email_text:
         with st.spinner("Analysing correspondence..."):
-            correspondence_analysis = analyse_correspondence(
-                email_text, sections, transcript_text
-            )
-            post_meeting_email = generate_post_meeting_email(
-                correspondence_analysis, st.session_state.answers
-            )
+            correspondence_analysis = analyse_correspondence(email_text, sections, transcript_text)
+            post_meeting_email = generate_post_meeting_email(correspondence_analysis, st.session_state.answers)
 
-    st.session_state.audit_results = audit_results
+    sneak_peek = None
+    for r in report_results:
+        if r['unlawful_deficiencies']:
+            sneak_peek = r
+            break
+    if sneak_peek is None and report_results:
+        sneak_peek = report_results[0]
+
+    st.session_state.report_results = report_results
     st.session_state.section_e_results = section_e_results
     st.session_state.correspondence_analysis = correspondence_analysis
     st.session_state.post_meeting_email = post_meeting_email
-    st.session_state.stage = 'results'
+    st.session_state.sneak_peek_result = sneak_peek
+    st.session_state.stage = 'preview'
     st.rerun()
 
-# ══════════════════════════════════════════════
-# STAGE: RESULTS
-# ══════════════════════════════════════════════
+elif st.session_state.stage == 'preview':
+
+    st.markdown(f"""
+    <div class="fred-header-bar">
+        <div class="fred-header-title">FRED</div>
+        <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    sneak_peek = st.session_state.sneak_peek_result
+
+    if sneak_peek:
+        render_sneak_peek(sneak_peek)
+
+    st.markdown("---")
+    st.markdown("### Get your full report — beta is free")
+    st.markdown("FRED is in beta. Enter your email to receive your full report and access the complete service. No payment required during beta.")
+
+    with st.form("email_capture_form"):
+        email_input = st.text_input("Your email address", placeholder="your@email.com")
+        submitted = st.form_submit_button("Get full access →")
+        if submitted:
+            if email_input and '@' in email_input:
+                st.session_state.email_captured = True
+                st.session_state.captured_email = email_input
+                st.session_state.stage = 'results'
+                st.rerun()
+            else:
+                st.warning("Please enter a valid email address.")
+
+    st.markdown(f"""
+    <div style="font-size:11px;color:{GREY};text-align:center;font-style:italic;margin-top:6px;">
+        Your email is used to send your report only. Not shared with third parties.
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("← Back", key="preview_back"):
+            st.session_state.stage = 'questions'
+            st.rerun()
 
 elif st.session_state.stage == 'results':
 
@@ -1874,7 +1668,7 @@ elif st.session_state.stage == 'results':
     </div>
     """, unsafe_allow_html=True)
 
-    audit_results = st.session_state.audit_results
+    report_results = st.session_state.report_results
     section_e_results = st.session_state.get('section_e_results', [])
     answers = st.session_state.answers
     correspondence_analysis = st.session_state.get('correspondence_analysis')
@@ -1884,88 +1678,88 @@ elif st.session_state.stage == 'results':
         render_correspondence(correspondence_analysis, post_meeting_email)
         st.markdown("---")
 
-    if audit_results or section_e_results:
-        render_audit(audit_results, section_e_results, answers)
+    if report_results or section_e_results:
+        render_full_report(report_results, section_e_results, answers)
 
     st.markdown("---")
     st.markdown("### Download your report")
     c1, c2 = st.columns(2)
     with c1:
-        docx_buf = generate_docx(audit_results, section_e_results, answers)
+        docx_buf = generate_docx(report_results, section_e_results, answers)
         st.download_button(
             "⬇ Download as Word (.docx)",
             data=docx_buf,
-            file_name="FRED_Audit_Report.docx",
+            file_name="FRED_Report.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             help="Best for Windows and Microsoft Office users"
         )
     with c2:
-        pdf_buf = generate_pdf(audit_results, section_e_results, answers)
+        pdf_buf = generate_pdf(report_results, section_e_results, answers)
         st.download_button(
             "⬇ Download as PDF",
             data=pdf_buf,
-            file_name="FRED_Audit_Report.pdf",
+            file_name="FRED_Report.pdf",
             mime="application/pdf",
             help="Best for Apple devices — universally readable"
         )
 
     st.markdown("---")
-    st.markdown("### Beta feedback")
-    st.markdown("Your answers directly shape the next version of FRED.")
+    st.markdown("### Add more documents")
+    st.markdown(
+        "Upload school emails, meeting transcripts, specialist reports, or school policies "
+        "to build the complete picture. FRED will cross-reference everything."
+    )
+    extra_post = st.file_uploader(
+        "Add a document", type=['pdf', 'docx', 'doc'], key='post_report_upload'
+    )
+    if extra_post:
+        with st.spinner("Reading..."):
+            extra_text, extra_error = read_file(extra_post)
+            if extra_error:
+                st.warning(extra_error)
+            else:
+                dtype = detect_doc_type(extra_text)
+                if dtype == 'email':
+                    st.session_state.email_text = extra_text
+                    st.success("Email read. Running correspondence analysis...")
+                    ca = analyse_correspondence(extra_text, st.session_state.extracted_sections, st.session_state.get('transcript_text', ''))
+                    pme = generate_post_meeting_email(ca, answers)
+                    st.session_state.correspondence_analysis = ca
+                    st.session_state.post_meeting_email = pme
+                    st.rerun()
+                elif dtype == 'transcript':
+                    st.session_state.transcript_text = extra_text
+                    st.success("Transcript read and added to the vault.")
+                elif dtype == 'policy':
+                    st.session_state.policy_text = extra_text
+                    st.success("School policy read and added. Re-running report with cross-reference...")
+                    sections = st.session_state.extracted_sections
+                    if 'F' in sections:
+                        entries = extract_entries(sections['F'])
+                        new_results = [audit_entry(e, i+1, extra_text) for i, e in enumerate(entries) if len(e.strip()) > 20]
+                        st.session_state.report_results = new_results
+                    st.rerun()
+                else:
+                    st.success("Document read and added to your file.")
 
-    with st.form("feedback_form"):
-        fb1 = st.selectbox(
-            "Did the audit identify anything you did not already know?",
-            ["Yes — significantly", "Yes — partially", "No — I knew all of this already"]
-        )
-        fb2 = st.selectbox(
-            "Did the traffic light system (red, amber, green) make sense?",
-            ["Yes — very clear", "Mostly clear", "Confusing", "Not sure"]
-        )
-        fb3 = st.selectbox(
-            "Would you pay for the one-off audit?",
-            ["Yes — definitely", "Yes — possibly", "Not sure", "No"]
-        )
-        fb4 = st.text_input(
-            "If yes — what feels like a fair price?",
-            placeholder="e.g. £25, £35, £50..."
-        )
-        fb5 = st.selectbox(
-            "Would you use a subscription that holds your documents, "
-            "drafts emails, and prepares you for meetings?",
-            ["Yes — definitely", "Yes — possibly", "Not sure", "No"]
-        )
-        fb6 = st.text_input(
-            "If yes — what would feel like a fair monthly price?",
-            placeholder="e.g. £10, £15, £20 per month..."
-        )
-        fb7 = st.text_area(
-            "Anything else — what worked, what did not, what is missing?",
-            height=100
-        )
-        submitted = st.form_submit_button("Submit feedback")
-        if submitted:
-            st.success(
-                "Thank you. Your feedback has been received and will be reviewed. "
-                "It directly informs the next version of FRED."
-            )
+    render_survey()
 
     st.markdown("---")
-    if st.button("Start new audit"):
+    if st.button("Start new report"):
         for key in list(defaults.keys()):
             if key in st.session_state:
                 del st.session_state[key]
         st.rerun()
 
 # ─────────────────────────────────────────────
-# FOOTER — AUDIT PAGES
+# FOOTER — NON LANDING PAGES
 # ─────────────────────────────────────────────
 
-if st.session_state.stage not in ('landing', 'full_service'):
+if st.session_state.stage not in ('landing',):
     st.markdown(
-        f"<div style='text-align:center; color:{GREY}; font-size:12px; padding-top:8px;'>"
+        f"<div style='text-align:center;color:{GREY};font-size:12px;padding-top:8px;'>"
         "FRED — Families' Rights and Entitlements Directory &nbsp;|&nbsp; "
-        "Beta v0.4 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
+        "Beta v0.5 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
         "Documents read during your session only — not stored or retained"
         "</div>",
         unsafe_allow_html=True
