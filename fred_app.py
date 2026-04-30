@@ -2020,53 +2020,43 @@ elif st.session_state.stage == 'preview':
 
     st.markdown("---")
     st.markdown("### Get your full report — beta is free")
-    st.markdown("Enter your email to receive your full report and access the complete service including the subscription correspondence features. No payment required during beta.")
+    st.markdown(
+        "FRED is in beta. Enter your email to access your full report and the complete service. "
+        "No payment required during beta."
+    )
 
-    with st.form("email_capture_form"):
-        email_input = st.text_input("Your email address", placeholder="your@email.com")
-        submitted = st.form_submit_button("Get full access →")
-        if submitted:
-            if email_input and '@' in email_input:
-                st.session_state.email_captured = True
-                st.session_state.is_subscriber = True
-                st.session_state.captured_email = email_input
-                # Write to Google Sheet via Streamlit secrets if available
-                try:
-                    import gspread
-                    from google.oauth2.service_account import Credentials
-                    from datetime import datetime
-                    scope = [
-                        'https://spreadsheets.google.com/feeds',
-                        'https://www.googleapis.com/auth/drive'
-                    ]
-                    creds_dict = st.secrets["gcp_service_account"]
-                    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-                    client = gspread.authorize(creds)
-                    sheet = client.open_by_key('1QAw8cT3qnNDZj2TjuqSCW4xC26Ce4dK4F2EK8Y9thZg')
-                    worksheet = sheet.sheet1
-                    worksheet.append_row([
-                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        email_input,
-                        st.session_state.answers.get('q1', 'Unknown'),
-                        st.session_state.answers.get('q2', 'Unknown'),
-                        st.session_state.answers.get('q3', 'Unknown'),
-                        st.session_state.answers.get('q5', 'Unknown'),
-                    ])
-                except Exception:
-                    # Silently fail if credentials not configured
-                    # Email is still captured in session for this visit
-                    pass
-                st.session_state.stage = 'results'
-                st.rerun()
-            else:
-                st.warning("Please enter a valid email address.")
+    st.markdown(f"""
+    <div style='text-align:center;padding:20px;background:#F4F6F7;
+        border-radius:10px;margin:12px 0;'>
+        <div style='font-size:14px;color:#2C3E50;margin-bottom:16px;line-height:1.6;'>
+            Enter your email to unlock your full report instantly.
+            No payment. No commitment. Beta access is free.
+        </div>
+        <a href='https://tally.so/r/Ek8kqo' target='_blank'
+            style='background:#1B4F72;color:white;text-decoration:none;
+            padding:13px 32px;border-radius:8px;font-size:15px;font-weight:500;
+            display:inline-block;'>
+            Get full access →
+        </a>
+        <div style='font-size:11px;color:#717D7E;margin-top:10px;font-style:italic;'>
+            Your email is used to send your report only. Not shared with third parties.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown(f"<div style='font-size:11px;color:{GREY};text-align:center;font-style:italic;margin-top:6px;'>Your email is used to send your report only. Not shared with third parties.</div>", unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("*Already submitted your email? Click below to continue to your full report.*")
 
-    col1, _ = st.columns(2)
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("← Back", key="preview_back"):
             st.session_state.stage = 'questions'
+            st.rerun()
+    with col2:
+        if st.button("I have submitted my email — show my report →", key="bypass_email"):
+            st.session_state.email_captured = True
+            st.session_state.is_subscriber = True
+            st.session_state.stage = 'results'
             st.rerun()
 
 elif st.session_state.stage == 'results':
