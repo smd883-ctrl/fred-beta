@@ -1482,32 +1482,26 @@ def generate_pdf(report_results, section_e_results, answers):
 def render_survey():
     st.markdown("---")
     st.markdown("### Beta feedback")
-    st.markdown("Takes about two minutes. Every answer goes directly to the team building FRED.")
-
-    with st.form("feedback_form"):
-        st.selectbox("Did the report identify anything you did not already know?",
-            ["Yes — significantly", "Yes — partially", "No — I knew this already"])
-        st.selectbox("Did the traffic light system make sense?",
-            ["Yes — very clear", "Mostly clear", "Confusing", "Not sure"])
-        st.selectbox("Does the layout feel simple and easy to follow?",
-            ["Yes — very simple", "Mostly", "Could be simpler", "No"])
-        st.selectbox("How does it look to you?",
-            ["Clean and professional", "Fine but nothing special", "Needs more personality", "Not sure"])
-        st.selectbox("Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
-            ["Yes — colour theme", "Yes — text size", "Yes — both", "Not bothered", "No"])
-        st.selectbox("Would you pay for the one-off report?",
-            ["Yes — definitely", "Possibly", "Not sure", "No"])
-        st.text_input("What feels like a fair price for the full report?", placeholder="e.g. £25, £35, £50...")
-        st.selectbox("Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
-            ["Yes — definitely", "Possibly", "Not sure", "No"])
-        st.text_input("What would feel like a fair monthly price?", placeholder="e.g. £10, £15, £20 per month...")
-        st.text_area("Anything else — what worked, what did not, what is missing?", height=80)
-        st.markdown("---")
-        st.markdown("**Would you like to be notified when FRED launches?**")
-        st.radio("", ["Yes — notify me", "No thank you"], horizontal=True, label_visibility="collapsed")
-        submitted = st.form_submit_button("Submit feedback")
-        if submitted:
-            st.success("Thank you. Your feedback has been received and will be reviewed.")
+    st.markdown(
+        "Takes about two minutes. Every answer goes directly to the team building FRED. "
+        "Your feedback shapes the final product."
+    )
+    st.markdown(f"""
+    <div style='text-align:center;padding:20px;background:#F4F6F7;
+        border-radius:10px;margin:12px 0;'>
+        <div style='font-size:15px;font-weight:500;color:#1A252F;margin-bottom:8px;'>
+            Open the feedback form
+        </div>
+        <div style='font-size:13px;color:#717D7E;margin-bottom:16px;line-height:1.6;'>
+            Two minutes. Shapes the next version of FRED directly.
+        </div>
+        <a href='https://tally.so/r/b5NVAE' target='_blank'
+            style='background:#1B4F72;color:white;text-decoration:none;
+            padding:12px 28px;border-radius:8px;font-size:14px;font-weight:500;'>
+            Give feedback →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # LANDING PAGE
@@ -2036,6 +2030,32 @@ elif st.session_state.stage == 'preview':
                 st.session_state.email_captured = True
                 st.session_state.is_subscriber = True
                 st.session_state.captured_email = email_input
+                # Write to Google Sheet via Streamlit secrets if available
+                try:
+                    import gspread
+                    from google.oauth2.service_account import Credentials
+                    from datetime import datetime
+                    scope = [
+                        'https://spreadsheets.google.com/feeds',
+                        'https://www.googleapis.com/auth/drive'
+                    ]
+                    creds_dict = st.secrets["gcp_service_account"]
+                    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+                    client = gspread.authorize(creds)
+                    sheet = client.open_by_key('1QAw8cT3qnNDZj2TjuqSCW4xC26Ce4dK4F2EK8Y9thZg')
+                    worksheet = sheet.sheet1
+                    worksheet.append_row([
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        email_input,
+                        st.session_state.answers.get('q1', 'Unknown'),
+                        st.session_state.answers.get('q2', 'Unknown'),
+                        st.session_state.answers.get('q3', 'Unknown'),
+                        st.session_state.answers.get('q5', 'Unknown'),
+                    ])
+                except Exception:
+                    # Silently fail if credentials not configured
+                    # Email is still captured in session for this visit
+                    pass
                 st.session_state.stage = 'results'
                 st.rerun()
             else:
