@@ -2033,38 +2033,25 @@ elif st.session_state.stage == 'preview':
         "No payment required during beta."
     )
 
-    st.markdown(f"""
-    <div style='text-align:center;padding:20px;background:#F4F6F7;
-        border-radius:10px;margin:12px 0;'>
-        <div style='font-size:14px;color:#2C3E50;margin-bottom:16px;line-height:1.6;'>
-            Enter your email to unlock your full report instantly.
-            No payment. No commitment. Beta access is free.
-        </div>
-        <a href='https://tally.so/r/Ek8kqo' target='_blank'
-            style='background:#1B4F72;color:white;text-decoration:none;
-            padding:13px 32px;border-radius:8px;font-size:15px;font-weight:500;
-            display:inline-block;'>
-            Get full access →
-        </a>
-        <div style='font-size:11px;color:#717D7E;margin-top:10px;font-style:italic;'>
-            Your email is used to send your report only. Not shared with third parties.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.form("email_capture_form"):
+        email_input = st.text_input("Your email address", placeholder="your@email.com")
+        submitted = st.form_submit_button("Get full access →")
+        if submitted:
+            if email_input and '@' in email_input:
+                st.session_state.email_captured = True
+                st.session_state.is_subscriber = True
+                st.session_state.captured_email = email_input
+                st.session_state.stage = 'results'
+                st.rerun()
+            else:
+                st.warning("Please enter a valid email address.")
 
-    st.markdown("---")
-    st.markdown("*Already submitted your email? Click below to continue to your full report.*")
+    st.markdown(f"<div style='font-size:11px;color:#717D7E;text-align:center;font-style:italic;margin-top:6px;'>Your email is used to send your report only. Not shared with third parties.</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    col1, _ = st.columns(2)
     with col1:
         if st.button("← Back", key="preview_back"):
             st.session_state.stage = 'questions'
-            st.rerun()
-    with col2:
-        if st.button("I have submitted my email — show my report →", key="bypass_email"):
-            st.session_state.email_captured = True
-            st.session_state.is_subscriber = True
-            st.session_state.stage = 'results'
             st.rerun()
 
 elif st.session_state.stage == 'results':
