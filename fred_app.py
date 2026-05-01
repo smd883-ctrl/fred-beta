@@ -1835,13 +1835,16 @@ elif st.session_state.stage == 'upload':
                 if vacuum_count > 0:
                     st.info(f"FRED has read {len(history_texts)} historical email(s). {vacuum_count} statement(s) implying undocumented history identified and held in vault.")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("← Back to home", key="upload_back"):
-                st.session_state.stage = 'landing'
-                st.rerun()
-        with col2:
-            if st.button("Continue →", key="upload_continue"):
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("← Back to home", key="upload_back"):
+            st.session_state.stage = 'landing'
+            st.rerun()
+    with col2:
+        if st.button("Continue →", key="upload_continue"):
+            if not st.session_state.extracted_sections:
+                st.warning("Please upload a document first.")
+            else:
                 st.session_state.stage = 'questions'
                 st.rerun()
 
