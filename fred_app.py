@@ -1,6 +1,6 @@
 """
 FRED — Families' Rights and Entitlements Directory
-Beta Version 0.7
+Beta Version 0.6
 
 New in v0.6:
 - Handshake model: one-off report is clean, subscription adds correspondence intelligence
@@ -17,7 +17,6 @@ New in v0.6:
 
 import streamlit as st
 import fitz
-import requests
 import re
 import io
 from docx import Document as DocxDocument
@@ -250,8 +249,6 @@ defaults = {
     'extracted_sections': {},
     'report_results': [],
     'section_e_results': [],
-    'b_vs_f_gaps': [],
-    'health_social_gaps': [],
     'policy_text': '',
     'raw_text': '',
     'active_emails': [],
@@ -425,86 +422,6 @@ def identify_sections(text):
             if len(content) > 20:
                 sections[key] = content
     return sections
-
-
-def analyse_section_b_vs_f(sections):
-    """
-    Cross reference Section B needs against Section F provision.
-    Identifies needs stated in B that have no corresponding provision in F.
-    """
-    gaps = []
-    if 'B' not in sections or 'F' not in sections:
-        return gaps
-
-    bl = sections['B'].lower()
-    fl = sections['F'].lower()
-
-    need_provision_map = [
-        ('communication', ['communication', 'speech', 'language', 'salt', 'slt']),
-        ('social interaction', ['social', 'interaction', 'peer']),
-        ('emotional regulation', ['emotional', 'regulation', 'anxiety', 'mental health']),
-        ('sensory', ['sensory', 'movement', 'calm']),
-        ('literacy', ['literacy', 'reading', 'writing', 'phonics']),
-        ('numeracy', ['numeracy', 'maths', 'mathematics']),
-        ('fine motor', ['fine motor', 'handwriting', 'occupational']),
-        ('attention', ['attention', 'focus', 'concentration', 'engagement']),
-        ('independence', ['independence', 'independent', 'self help']),
-    ]
-
-    for need_label, keywords in need_provision_map:
-        need_in_b = any(kw in bl for kw in keywords)
-        provision_in_f = any(kw in fl for kw in keywords)
-        if need_in_b and not provision_in_f:
-            gaps.append(
-                f'{need_label.title()} needs are identified in Section B but no corresponding '                f'provision appears in Section F. The Children and Families Act 2014 requires '                f'Section F to specify provision for every identified need. '                f'This gap must be addressed at annual review.'
-            )
-
-    return gaps
-
-
-def analyse_health_social_gaps(sections):
-    """
-    Check Sections C/D/G/H for health and social care provision.
-    Flag where Section B identifies needs but health/social sections are empty.
-    """
-    gaps = []
-    if 'B' not in sections:
-        return gaps
-
-    bl = sections['B'].lower()
-
-    health_needs = ['health', 'medical', 'sensory processing', 'allergy', 'epilepsy',
-                   'diabetes', 'anxiety', 'mental health', 'therapy', 'occupational']
-    social_needs = ['social care', 'family support', 'respite', 'personal care',
-                   'self care', 'daily living']
-
-    has_health_need = any(kw in bl for kw in health_needs)
-    has_social_need = any(kw in bl for kw in social_needs)
-
-    health_sections = ''.join([
-        sections.get('C', ''),
-        sections.get('G', ''),
-    ]).lower()
-
-    social_sections = ''.join([
-        sections.get('D', ''),
-        sections.get('H', ''),
-    ]).lower()
-
-    health_empty = len(health_sections.strip()) < 50 or 'no health' in health_sections or 'none identified' in health_sections
-    social_empty = len(social_sections.strip()) < 50 or 'no social' in social_sections or 'none identified' in social_sections
-
-    if has_health_need and health_empty:
-        gaps.append(
-            'Section B identifies health-related needs but Sections C and G contain no health provision. '            'Where health needs are identified, the LA must consider whether health provision is required '            'and must specify it in Section C. If no health provision is needed this must be explicitly '            'stated and justified. Worth raising at annual review.'
-        )
-
-    if has_social_need and social_empty:
-        gaps.append(
-            'Section B identifies social care related needs but Sections D and H contain no social care provision. '            'Where social care needs are identified the LA must consider whether social care provision is required '            'and must specify it in Section D. Worth raising at annual review.'
-        )
-
-    return gaps
 
 def extract_entries(text):
     numbered = re.split(r'\n\s*\d+[\.\)]\s+', text)
@@ -690,7 +607,7 @@ def audit_entry(entry_text, entry_number, policy_text=''):
         'Request the Physical Delivery Log for this provision. '
         'Dated entries must show each session — date, duration, who delivered, and format. '
         'If no log exists there is no evidence this provision has been delivered. '
-        ''
+        'Lack of evidence is evidence of lack.'
     ]
     if not compliant:
         tactical.append('At your next annual review this entry must be rewritten to full specification standard. FRED will remind you of this finding as your review approaches.')
@@ -915,7 +832,7 @@ def generate_three_findings(email_text, ehcp_sections, transcript_text='', histo
             findings.append({
                 'label': f'Unsubstantiated claim — "{term}"',
                 'extract': extract or f'Use of "{term}" in email',
-                'comment': f'{exp}. A delivery log is required to substantiate this claim.',
+                'comment': f'{exp}. A delivery log is required to substantiate this claim. Lack of evidence is evidence of lack.',
             })
             break
 
@@ -1296,19 +1213,12 @@ def render_full_report(report_results, section_e_results, answers):
         compliant_count = sum(1 for r in report_results if r['is_compliant'])
         total = len(report_results)
 
-        if compliant_count > 0:
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Total entries", total)
-            c2.metric("Lawful requirement not met", unlawful_count,
-                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
-                     delta_color="inverse")
-            c3.metric("Compliant", compliant_count)
-        else:
-            c1, c2 = st.columns(2)
-            c1.metric("Total entries", total)
-            c2.metric("Lawful requirement not met", unlawful_count,
-                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
-                     delta_color="inverse")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total entries", total)
+        c2.metric("Lawful requirement not met", unlawful_count,
+                 delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
+                 delta_color="inverse")
+        c3.metric("Compliant", compliant_count)
         st.markdown("<br>", unsafe_allow_html=True)
 
         for result in report_results:
@@ -1359,29 +1269,11 @@ def render_full_report(report_results, section_e_results, answers):
                 if result['unlawful_deficiencies']:
                     st.markdown("""
                     <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
-                    
+                    <div class="evidence-line">Lack of evidence is evidence of lack.</div>
                     """, unsafe_allow_html=True)
                 st.markdown("</div><br>", unsafe_allow_html=True)
 
-        # B vs F cross reference gaps
-    b_vs_f_gaps = st.session_state.get('b_vs_f_gaps', [])
-    health_social_gaps = st.session_state.get('health_social_gaps', [])
-
-    if b_vs_f_gaps or health_social_gaps:
-        st.markdown("---")
-        st.markdown("### Cross-reference findings")
-
-        if b_vs_f_gaps:
-            st.markdown("**Section B needs not reflected in Section F provision**")
-            for gap in b_vs_f_gaps:
-                st.markdown(f'<div class="unlawful-flag">⚠ {gap}</div>', unsafe_allow_html=True)
-
-        if health_social_gaps:
-            st.markdown("**Health and social care provision gaps**")
-            for gap in health_social_gaps:
-                st.markdown(f'<div class="bestpractice-flag">◉ {gap}</div>', unsafe_allow_html=True)
-
-    st.info("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.")
+        st.info("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.")
 
     st.markdown(f"""
     <div class="review-capture">
@@ -1439,7 +1331,7 @@ def generate_docx(report_results, section_e_results, answers):
     s = doc.add_paragraph()
     s.alignment = WD_ALIGN_PARAGRAPH.CENTER
     s.add_run("Families' Rights and Entitlements Directory — EHCP Report").font.color.rgb = RGBColor(0x2E, 0x86, 0xC1)
-    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.7")
+    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.6")
     doc.add_paragraph("FRED provides information to help you understand the language of your child's plan. It does not constitute legal advice.")
     doc.add_page_break()
     h("Output key", level=2)
@@ -1490,7 +1382,7 @@ def generate_docx(report_results, section_e_results, answers):
                 for advice in result['tactical_advice']:
                     p(f"→ {advice}", BLUE_C)
             if result['unlawful_deficiencies']:
-                p("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.", BLUE_C, bold=True, italic=True)
+                p("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014. Lack of evidence is evidence of lack.", BLUE_C, bold=True, italic=True)
             doc.add_paragraph()
 
     buf = io.BytesIO()
@@ -1528,7 +1420,7 @@ def generate_pdf(report_results, section_e_results, answers):
     story.append(Paragraph("FRED", ps('TT', 'Title', textColor=brand, fontSize=32)))
     story.append(Paragraph("Families' Rights and Entitlements Directory", h1))
     story.append(Spacer(1, 5*mm))
-    story.append(Paragraph(f"EHCP Report | Status: {answers.get('q2','Unknown')} | Beta v0.7", body))
+    story.append(Paragraph(f"EHCP Report | Status: {answers.get('q2','Unknown')} | Beta v0.6", body))
     story.append(Paragraph("Not legal advice.", body))
     story.append(Spacer(1, 4*mm))
     story.append(Paragraph("● Red — lawful requirement not met.", red_s))
@@ -1576,7 +1468,7 @@ def generate_pdf(report_results, section_e_results, answers):
                 for advice in result['tactical_advice']:
                     story.append(Paragraph(f"→ {advice}", tac_s))
             if result['unlawful_deficiencies']:
-                story.append(Paragraph("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.", anc_s))
+                story.append(Paragraph("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014. Lack of evidence is evidence of lack.", anc_s))
             story.append(Spacer(1, 5*mm))
 
     doc.build(story)
@@ -1587,73 +1479,34 @@ def generate_pdf(report_results, section_e_results, answers):
 # SURVEY
 # ─────────────────────────────────────────────
 
-def send_to_emailjs(data):
-    """Send form data to EmailJS silently in background."""
-    try:
-        service_id = st.secrets.get("EMAILJS_SERVICE_ID", "")
-        template_id = st.secrets.get("EMAILJS_TEMPLATE_ID", "")
-        public_key = st.secrets.get("EMAILJS_PUBLIC_KEY", "")
-        if not all([service_id, template_id, public_key]):
-            return False
-        payload = {
-            "service_id": service_id,
-            "template_id": template_id,
-            "user_id": public_key,
-            "template_params": data
-        }
-        response = requests.post(
-            "https://api.emailjs.com/api/v1.0/email/send",
-            json=payload,
-            timeout=10
-        )
-        return response.status_code == 200
-    except Exception:
-        return False
-
-
 def render_survey():
     st.markdown("---")
     st.markdown("### Beta feedback")
     st.markdown("Takes about two minutes. Every answer goes directly to the team building FRED.")
-
     with st.form("feedback_form"):
-        q1 = st.selectbox("Did the report identify anything you did not already know?",
+        st.selectbox("Did the report identify anything you did not already know?",
             ["Yes — significantly", "Yes — partially", "No — I knew this already"])
-        q2 = st.selectbox("Did the traffic light system make sense?",
+        st.selectbox("Did the traffic light system make sense?",
             ["Yes — very clear", "Mostly clear", "Confusing", "Not sure"])
-        q3 = st.selectbox("Does the layout feel simple and easy to follow?",
+        st.selectbox("Does the layout feel simple and easy to follow?",
             ["Yes — very simple", "Mostly", "Could be simpler", "No"])
-        q4 = st.selectbox("How does it look to you?",
+        st.selectbox("How does it look to you?",
             ["Clean and professional", "Fine but nothing special", "Needs more personality", "Not sure"])
-        q5 = st.selectbox("Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
+        st.selectbox("Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
             ["Yes — colour theme", "Yes — text size", "Yes — both", "Not bothered", "No"])
-        q6 = st.selectbox("Would you pay for the one-off report?",
+        st.selectbox("Would you pay for the one-off report?",
             ["Yes — definitely", "Possibly", "Not sure", "No"])
-        q7 = st.text_input("What feels like a fair price for the full report?", placeholder="e.g. £25, £35, £50...")
-        q8 = st.selectbox("Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
+        st.text_input("What feels like a fair price for the full report?", placeholder="e.g. £25, £35, £50...")
+        st.selectbox("Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
             ["Yes — definitely", "Possibly", "Not sure", "No"])
-        q9 = st.text_input("What would feel like a fair monthly price?", placeholder="e.g. £10, £15, £20 per month...")
-        q10 = st.text_area("Anything else — what worked, what did not, what is missing?", height=80)
+        st.text_input("What would feel like a fair monthly price?", placeholder="e.g. £10, £15, £20 per month...")
+        st.text_area("Anything else — what worked, what did not, what is missing?", height=80)
         st.markdown("---")
         st.markdown("**Would you like to be notified when FRED launches?**")
-        q11 = st.radio("", ["Yes — notify me", "No thank you"], horizontal=True, label_visibility="collapsed")
+        st.radio("", ["Yes — notify me", "No thank you"], horizontal=True, label_visibility="collapsed")
         submitted = st.form_submit_button("Submit feedback")
-
         if submitted:
-            import datetime
-            data = {
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "user_email": st.session_state.get("captured_email", "not provided"),
-                "q1": q1, "q2": q2, "q3": q3, "q4": q4,
-                "q5": q5, "q6": q6, "q7": q7 or "not provided",
-                "q8": q8, "q9": q9 or "not provided",
-                "q10": q10 or "not provided", "q11": q11,
-            }
-            sent = send_to_emailjs(data)
-            if sent:
-                st.success("Thank you. Your feedback has been received and will be reviewed.")
-            else:
-                st.success("Thank you. Your feedback has been noted.")
+            st.success("Thank you. Your feedback has been received and will be reviewed.")
 
 # ─────────────────────────────────────────────
 # LANDING PAGE
@@ -1873,7 +1726,7 @@ elif st.session_state.stage == 'upload':
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     <div class="fred-beta-notice">
-        <strong>Beta v0.7</strong> — Design and functionality are actively being developed.
+        <strong>Beta v0.6</strong> — Design and functionality are actively being developed.
         FRED provides information to help you understand the language of your child's plan.
         It does not constitute legal advice.
     </div>
@@ -2091,14 +1944,6 @@ elif st.session_state.stage == 'processing':
         if 'E' in sections:
             section_e_results = audit_section_e(sections['E'])
 
-    with st.spinner("Cross referencing Section B needs against Section F provision..."):
-        b_vs_f_gaps = analyse_section_b_vs_f(sections)
-        st.session_state.b_vs_f_gaps = b_vs_f_gaps
-
-    with st.spinner("Checking health and social care sections..."):
-        health_social_gaps = analyse_health_social_gaps(sections)
-        st.session_state.health_social_gaps = health_social_gaps
-
     three_findings = None
     intent_result = None
     tone_read = None
@@ -2164,7 +2009,7 @@ elif st.session_state.stage == 'preview':
             </div>
             {''.join(f'<div class="unlawful-flag">⚠ {d}</div>' for d in unlawful)}
             <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
-            
+            <div class="evidence-line">Lack of evidence is evidence of lack.</div>
         </div>
         <div style="background:#F4F6F7;padding:16px;text-align:center;
             border:1px solid #D5D8DC;border-top:none;border-radius:0 0 6px 6px;">
@@ -2196,15 +2041,6 @@ elif st.session_state.stage == 'preview':
                 st.session_state.email_captured = True
                 st.session_state.is_subscriber = True
                 st.session_state.captured_email = email_input
-                # Send email capture to EmailJS silently
-                import datetime
-                send_to_emailjs({
-                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "user_email": email_input,
-                    "q1": "email capture only", "q2": "", "q3": "", "q4": "",
-                    "q5": "", "q6": "", "q7": "", "q8": "", "q9": "",
-                    "q10": "beta access requested", "q11": "",
-                })
                 st.session_state.stage = 'results'
                 st.rerun()
             else:
@@ -2298,7 +2134,7 @@ if st.session_state.stage not in ('landing',):
     st.markdown(
         f"<div style='text-align:center;color:{GREY};font-size:12px;padding-top:8px;'>"
         "FRED — Families' Rights and Entitlements Directory &nbsp;|&nbsp; "
-        "Beta v0.7 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
+        "Beta v0.6 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
         "Documents read during your session only — not stored or retained"
         "</div>",
         unsafe_allow_html=True
