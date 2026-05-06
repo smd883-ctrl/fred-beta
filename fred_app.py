@@ -410,48 +410,20 @@ def read_file(uploaded_file):
         return None, "Format not supported. Please upload a PDF or Word document."
 
 def identify_sections(text):
-    """
-    Identify all EHCP sections A through K.
-    Handles varied LA formatting — SECTION A, Section A, A:, PART A, or just heading.
-    """
     sections = {}
-
-    # Primary pattern — standard section labelling
     patterns = {
-        'A': r'(?:SECTION\s+A|Section\s+A|PART\s+A)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[B-K]|Section\s+[B-K]|PART\s+[B-K])|$)',
-        'B': r'(?:SECTION\s+B|Section\s+B|PART\s+B)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[C-K]|Section\s+[C-K]|PART\s+[C-K])|$)',
-        'C': r'(?:SECTION\s+C|Section\s+C|PART\s+C)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[D-K]|Section\s+[D-K]|PART\s+[D-K])|$)',
-        'D': r'(?:SECTION\s+D|Section\s+D|PART\s+D)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[E-K]|Section\s+[E-K]|PART\s+[E-K])|$)',
-        'E': r'(?:SECTION\s+E|Section\s+E|PART\s+E)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[F-K]|Section\s+[F-K]|PART\s+[F-K])|$)',
-        'F': r'(?:SECTION\s+F|Section\s+F|PART\s+F)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[G-K]|Section\s+[G-K]|PART\s+[G-K])|$)',
-        'G': r'(?:SECTION\s+G|Section\s+G|PART\s+G)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[H-K]|Section\s+[H-K]|PART\s+[H-K])|$)',
-        'H': r'(?:SECTION\s+H|Section\s+H|PART\s+H)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[I-K]|Section\s+[I-K]|PART\s+[I-K])|$)',
-        'I': r'(?:SECTION\s+I|Section\s+I|PART\s+I)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[J-K]|Section\s+[J-K]|PART\s+[J-K])|$)',
-        'J': r'(?:SECTION\s+J|Section\s+J|PART\s+J)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+K|Section\s+K|PART\s+K)|$)',
-        'K': r'(?:SECTION\s+K|Section\s+K|PART\s+K)[:\s\-–—]*[^\n]*\n(.*?)$',
+        'A': r'(?:SECTION\s+A|Section\s+A)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[B-K]|Section\s+[B-K])|$)',
+        'B': r'(?:SECTION\s+B|Section\s+B)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[C-K]|Section\s+[C-K])|$)',
+        'E': r'(?:SECTION\s+E|Section\s+E)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[F-K]|Section\s+[F-K])|$)',
+        'F': r'(?:SECTION\s+F|Section\s+F)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[G-K]|Section\s+[G-K])|$)',
+        'I': r'(?:SECTION\s+I|Section\s+I)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[J-K]|Section\s+[J-K])|$)',
     }
-
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
         if match:
-            section_content = re.sub(r'\n{3,}', '\n\n', match.group(1).strip())
-            if len(section_content) > 20:
-                sections[key] = section_content
-
-    # Fallback — if standard patterns fail try alternate formats
-    if 'F' not in sections:
-        fallback_patterns = [
-            r'(?:provision|section f|part f)[:\s]*\n(.*?)(?=(?:section|part)\s+[g-k]|$)',
-            r'(?:special educational provision)[:\s]*\n(.*?)(?=(?:section|part)|$)',
-        ]
-        for fp in fallback_patterns:
-            match = re.search(fp, text, re.DOTALL | re.IGNORECASE)
-            if match:
-                section_content = re.sub(r'\n{3,}', '\n\n', match.group(1).strip())
-                if len(section_content) > 20:
-                    sections['F'] = section_content
-                    break
-
+            content = re.sub(r'\n{3,}', '\n\n', match.group(1).strip())
+            if len(content) > 20:
+                sections[key] = content
     return sections
 
 
