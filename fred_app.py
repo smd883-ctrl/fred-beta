@@ -1324,12 +1324,19 @@ def render_full_report(report_results, section_e_results, answers):
         compliant_count = sum(1 for r in report_results if r['is_compliant'])
         total = len(report_results)
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total entries", total)
-        c2.metric("Lawful requirement not met", unlawful_count,
-                 delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
-                 delta_color="inverse")
-        c3.metric("Compliant", compliant_count)
+        if compliant_count > 0:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Total entries", total)
+            c2.metric("Lawful requirement not met", unlawful_count,
+                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
+                     delta_color="inverse")
+            c3.metric("Compliant", compliant_count)
+        else:
+            c1, c2 = st.columns(2)
+            c1.metric("Total entries", total)
+            c2.metric("Lawful requirement not met", unlawful_count,
+                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
+                     delta_color="inverse")
         st.markdown("<br>", unsafe_allow_html=True)
 
         for result in report_results:
