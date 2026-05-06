@@ -1,27 +1,18 @@
 """
 FRED — Families' Rights and Entitlements Directory
-Beta Version 0.5
+Beta Version 0.6
 
-Complete build incorporating all agreed changes:
-- Report language throughout (not audit)
-- Lawful/unlawful throughout (not legal/illegal)
-- Full landing page as entry point
-- Get my report as single primary CTA
-- Traffic light before upload
-- Single upload zone with expander
-- Sneak peek with email capture for beta
-- Three tier engine: red #C0392B, amber #D4A017, green #1E8449
-- Named accountable person amber only
-- APDR connection in delivery log
-- Lack of evidence is evidence of lack
-- Correspondence module with transcript cross reference
-- Post meeting summary generation
-- Word and PDF document support
-- Password protected document guidance
-- School policy cross reference
-- Annual review date capture
-- Subscription signal specific to findings
-- Full survey with notification opt-in
+New in v0.6:
+- Handshake model: one-off report is clean, subscription adds correspondence intelligence
+- Correspondence upload: last two emails active, history as background context
+- Three finding briefing format
+- Intent detection: case building vs collaborative vs mixed
+- Vacuum detection: statements implying undocumented history
+- Hold option alongside draft and brief me
+- APDR continuous description flagged specifically
+- Professional dignity flag at escalation points
+- Email output options: Word, bullets, or as drafted
+- What-if scenario library: first set from real thread analysis
 """
 
 import streamlit as st
@@ -53,6 +44,8 @@ BLUE_BG = "#EAF2FF"
 GREY = "#717D7E"
 PURPLE = "#8E44AD"
 PURPLE_BG = "#F5EEF8"
+TEAL = "#148F77"
+TEAL_BG = "#E8F8F5"
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -66,24 +59,21 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# GLOBAL STYLES
+# STYLES
 # ─────────────────────────────────────────────
 
 st.markdown(f"""
 <style>
 *{{box-sizing:border-box;}}
 .main{{max-width:780px;margin:0 auto;}}
-
 .fred-nav{{display:flex;justify-content:space-between;align-items:center;
-    padding:14px 0;border-bottom:0.5px solid #D5D8DC;margin-bottom:0;}}
+    padding:14px 0;border-bottom:0.5px solid #D5D8DC;}}
 .fred-nav-logo{{font-size:15px;font-weight:500;letter-spacing:1px;color:{GREY};}}
 .fred-nav-link{{font-size:13px;color:{GREY};cursor:pointer;}}
 .fred-nav-links{{display:flex;gap:24px;}}
-
 .fred-beta{{background:#FEF9E7;border-top:0.5px solid #F9CA24;
     border-bottom:0.5px solid #F9CA24;padding:9px 0;text-align:center;
     font-size:12px;color:#7D6608;}}
-
 .fred-hero{{padding:52px 0 44px;text-align:center;}}
 .fred-big{{font-size:80px;font-weight:500;letter-spacing:8px;
     color:{BRAND_BLUE};line-height:1;margin-bottom:6px;}}
@@ -99,17 +89,10 @@ st.markdown(f"""
     max-width:460px;margin:0 auto 28px;}}
 .fred-hero-flex span{{color:{BRAND_BLUE};font-weight:500;}}
 .fred-hero-cta{{display:flex;flex-direction:column;align-items:center;gap:5px;}}
-.fred-btn-primary{{background:{BRAND_BLUE};color:white;border:none;
-    padding:13px 36px;border-radius:8px;font-size:15px;font-weight:500;
-    cursor:pointer;display:flex;align-items:center;gap:9px;}}
-.fred-btn-primary svg{{width:16px;height:16px;fill:white;}}
 .fred-btn-reassure{{font-size:13px;color:{GREY};font-style:italic;margin:3px 0 6px;}}
 .fred-btn-pricing{{font-size:13px;color:{GREY};}}
-.fred-btn-pricing span{{color:{BRAND_BLUE};text-decoration:underline;
-    text-underline-offset:3px;cursor:pointer;}}
-
+.fred-btn-pricing span{{color:{BRAND_BLUE};text-decoration:underline;cursor:pointer;}}
 .fred-divider{{border:none;border-top:0.5px solid #D5D8DC;margin:0;}}
-
 .fred-section{{padding:44px 0;}}
 .fred-sec-label{{font-size:11px;letter-spacing:2px;text-transform:uppercase;
     color:{GREY};margin-bottom:8px;text-align:center;}}
@@ -118,7 +101,6 @@ st.markdown(f"""
 .fred-sec-sub{{font-size:14px;color:#2C3E50;line-height:1.7;
     margin-bottom:20px;text-align:center;max-width:480px;
     margin-left:auto;margin-right:auto;}}
-
 .fred-bullets{{list-style:none;display:flex;flex-direction:column;
     align-items:center;gap:10px;margin-bottom:24px;padding:0;}}
 .fred-bullets li{{font-size:14px;color:#2C3E50;line-height:1.65;
@@ -126,10 +108,8 @@ st.markdown(f"""
 .fred-bdot{{width:6px;height:6px;min-width:6px;border-radius:50%;
     background:{BRAND_BLUE};margin-top:7px;}}
 .fred-sub-bullet{{color:{BRAND_BLUE};font-weight:500;}}
-
 .fred-upload-wrap{{display:flex;flex-direction:column;align-items:center;gap:8px;}}
 .fred-upload-note{{font-size:11px;color:{GREY};font-style:italic;}}
-
 .fred-traffic-legend{{background:#F4F6F7;border-radius:10px;
     padding:18px 20px;margin-bottom:16px;}}
 .fred-traffic-title{{font-size:13px;font-weight:500;color:#1A252F;margin-bottom:12px;}}
@@ -141,29 +121,6 @@ st.markdown(f"""
 .tdot-green{{background:{GREEN};}}
 .fred-ttext{{font-size:13px;color:#2C3E50;line-height:1.55;}}
 .fred-ttext strong{{color:#1A252F;font-weight:500;}}
-
-.fred-upload-zone{{border:1.5px dashed #BDC3C7;border-radius:10px;
-    padding:24px;text-align:center;margin-bottom:10px;}}
-.fred-upload-zone-title{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:4px;}}
-.fred-upload-zone-sub{{font-size:12px;color:{GREY};margin-bottom:14px;}}
-.fred-upload-tip{{background:#F4F6F7;border-radius:6px;padding:10px 14px;
-    font-size:12px;color:{GREY};margin-top:6px;line-height:1.6;}}
-.fred-upload-optional{{font-size:12px;color:{GREY};text-align:center;margin-top:8px;}}
-.fred-upload-optional-link{{color:{BRAND_BLUE};text-decoration:underline;cursor:pointer;}}
-
-.fred-sneak-header{{background:{BRAND_BLUE};color:white;padding:10px 16px;
-    border-radius:6px 6px 0 0;font-size:13px;font-weight:500;}}
-.fred-sneak-body{{padding:14px 16px;background:white;border:1px solid #D5D8DC;
-    border-top:none;}}
-.fred-sneak-entry{{font-size:12px;color:{GREY};font-style:italic;
-    margin-bottom:10px;line-height:1.5;}}
-.fred-sneak-more{{background:#F4F6F7;padding:16px;text-align:center;
-    border:1px solid #D5D8DC;border-top:none;border-radius:0 0 6px 6px;}}
-.fred-sneak-count{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:4px;}}
-.fred-sneak-sub{{font-size:12px;color:{GREY};margin-bottom:8px;
-    line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;}}
-.fred-sneak-ready{{font-size:13px;font-weight:500;color:{BRAND_BLUE};margin-bottom:12px;}}
-
 .fred-pricing-grid{{display:grid;
     grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
     gap:14px;margin-top:4px;}}
@@ -184,31 +141,28 @@ st.markdown(f"""
     align-items:flex-start;line-height:1.4;}}
 .fred-price-features li::before{{content:"";width:5px;height:5px;min-width:5px;
     border-radius:50%;background:{BRAND_BLUE};margin-top:4px;}}
-
 .fred-quote-box{{background:#F4F6F7;border-radius:12px;padding:28px 24px;}}
 .fred-quote{{font-size:16px;color:#1A252F;line-height:1.75;
     font-style:italic;margin-bottom:14px;}}
 .fred-quote-attr{{font-size:13px;color:{GREY};}}
-
 .fred-faq-item{{padding:14px 0;border-bottom:0.5px solid #D5D8DC;}}
 .fred-faq-item:last-child{{border-bottom:none;}}
 .fred-faq-q{{font-size:14px;font-weight:500;color:#1A252F;margin-bottom:5px;}}
 .fred-faq-a{{font-size:13px;color:#2C3E50;line-height:1.65;}}
-
 .fred-footer{{padding:28px 0;border-top:0.5px solid #D5D8DC;text-align:center;}}
 .fred-footer-logo{{font-size:16px;font-weight:500;color:{BRAND_BLUE};
     letter-spacing:3px;margin-bottom:8px;}}
 .fred-footer-text{{font-size:11px;color:{GREY};line-height:1.8;}}
-
 .fred-header-bar{{background:linear-gradient(135deg,{BRAND_BLUE},{BRAND_MID});
     color:white;padding:24px;border-radius:10px;margin-bottom:12px;}}
 .fred-header-title{{font-size:40px;font-weight:500;letter-spacing:4px;margin:0;}}
 .fred-header-sub{{font-size:13px;opacity:0.85;margin:4px 0 0 0;}}
-
 .fred-beta-notice{{background:#FEF9E7;border-left:4px solid #F39C12;
     padding:12px 16px;border-radius:4px;font-size:13px;
     color:#7D6608;margin-bottom:20px;}}
-
+.fred-sub-badge{{background:{BLUE_BG};border:1px solid {BRAND_BLUE};
+    border-radius:6px;padding:8px 14px;font-size:12px;color:{BRAND_BLUE};
+    font-weight:500;text-align:center;margin-bottom:16px;}}
 .unlawful-flag{{border-left:4px solid {RED};padding:8px 12px;margin:6px 0;
     background:{RED_BG};border-radius:0 4px 4px 0;font-size:13px;
     color:#922B21;line-height:1.5;}}
@@ -224,9 +178,37 @@ st.markdown(f"""
 .tactical-flag{{border-left:4px solid {BRAND_BLUE};padding:8px 12px;margin:6px 0;
     background:{BLUE_BG};border-radius:0 4px 4px 0;font-size:13px;
     color:#1A3A5C;line-height:1.5;}}
-.contradiction-flag{{border-left:4px solid {RED};padding:10px 14px;margin:8px 0;
-    background:{RED_BG};border-radius:0 6px 6px 0;font-size:13px;
-    color:#922B21;line-height:1.6;}}
+.intent-flag{{border-left:4px solid {TEAL};padding:8px 12px;margin:6px 0;
+    background:{TEAL_BG};border-radius:0 4px 4px 0;font-size:13px;
+    color:#0E6655;line-height:1.5;}}
+.vacuum-flag{{border-left:4px solid {PURPLE};padding:10px 14px;margin:8px 0;
+    background:{PURPLE_BG};border-radius:0 6px 6px 0;font-size:13px;
+    color:#6C3483;line-height:1.6;}}
+.finding-card{{border:1px solid #D5D8DC;border-radius:10px;
+    overflow:hidden;margin-bottom:16px;}}
+.finding-header{{background:{BRAND_BLUE};color:white;padding:10px 16px;
+    font-size:13px;font-weight:500;}}
+.finding-body{{padding:14px 16px;background:white;}}
+.finding-extract{{font-size:12px;color:{GREY};font-style:italic;
+    background:#F4F6F7;padding:8px 12px;border-radius:6px;
+    margin-bottom:10px;line-height:1.5;}}
+.finding-comment{{font-size:13px;color:#2C3E50;line-height:1.65;}}
+.tone-card{{background:#F4F6F7;border-radius:8px;padding:14px 18px;margin-bottom:12px;}}
+.tone-label{{font-size:11px;font-weight:500;letter-spacing:1px;
+    text-transform:uppercase;color:{GREY};margin-bottom:6px;}}
+.tone-text{{font-size:13px;color:#2C3E50;line-height:1.65;}}
+.record-card{{background:white;border:0.5px solid #D5D8DC;
+    border-radius:8px;padding:14px 18px;margin-bottom:12px;}}
+.record-item{{font-size:13px;color:#2C3E50;padding:4px 0;
+    display:flex;gap:8px;align-items:flex-start;}}
+.record-dot{{width:5px;height:5px;min-width:5px;border-radius:50%;
+    background:{BRAND_BLUE};margin-top:6px;}}
+.hold-card{{background:#FEF9E7;border:1px solid #F9CA24;
+    border-radius:8px;padding:14px 18px;margin:12px 0;
+    font-size:13px;color:#7D6608;line-height:1.6;}}
+.dignity-flag{{background:#FEF9E7;border-left:4px solid #F39C12;
+    padding:10px 14px;border-radius:0 6px 6px 0;
+    font-size:13px;color:#7D6608;line-height:1.6;margin:8px 0;}}
 .audit-header-red{{background:{RED};color:white;padding:10px 16px;
     border-radius:6px 6px 0 0;font-weight:500;font-size:13px;}}
 .audit-header-amber{{background:{AMBER};color:white;padding:10px 16px;
@@ -248,7 +230,8 @@ st.markdown(f"""
 .subscription-signal{{background:linear-gradient(135deg,{BRAND_BLUE},{BRAND_MID});
     color:white;padding:22px 24px;border-radius:8px;
     margin:24px 0;font-size:14px;line-height:1.75;}}
-
+.upload-tip{{background:#F4F6F7;border-radius:6px;padding:10px 14px;
+    font-size:12px;color:{GREY};margin-top:6px;line-height:1.6;}}
 .stButton>button{{background:{BRAND_BLUE};color:white;border:none;
     padding:10px 28px;border-radius:6px;font-weight:500;
     font-size:15px;width:100%;}}
@@ -268,19 +251,23 @@ defaults = {
     'section_e_results': [],
     'policy_text': '',
     'raw_text': '',
-    'email_text': '',
+    'active_emails': [],
+    'history_emails': [],
     'transcript_text': '',
     'correspondence_analysis': None,
+    'three_findings': None,
     'post_meeting_email': '',
     'sneak_peek_result': None,
     'email_captured': False,
+    'is_subscriber': False,
+    'correspondence_action': None,
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
 # ─────────────────────────────────────────────
-# OFSTED STABLE PRINCIPLES
+# OFSTED PRINCIPLES
 # ─────────────────────────────────────────────
 
 OFSTED_PRINCIPLES = [
@@ -288,6 +275,99 @@ OFSTED_PRINCIPLES = [
     {'area': 'Leadership and management', 'principle': 'Schools are expected to demonstrate that leaders and managers have clear oversight of SEND provision and its effectiveness. An absence of delivery logs and monitoring records weakens this evidence base significantly.'},
     {'area': 'Personal development', 'principle': 'Inspection frameworks expect schools to show how SEND pupils are supported to develop confidence, resilience, and independence. Provision contingent on the child self-identifying need is unlikely to meet this expectation.'},
     {'area': 'Safeguarding', 'principle': 'Effective safeguarding requires that schools have specific, documented arrangements for pupils with identified vulnerabilities. Vague or discretionary provision creates risk that safeguarding responsibilities cannot be evidenced.'},
+]
+
+# ─────────────────────────────────────────────
+# WHAT-IF SCENARIO LIBRARY
+# ─────────────────────────────────────────────
+
+WHAT_IF_SCENARIOS = [
+    {
+        'id': 'case_building',
+        'label': 'Case building pattern',
+        'trigger_words': ['unpredictable', 'other students', 'worrying', 'concerns raised', 'counts as a sanction', 'previous incidents', 'not the first time'],
+        'description': (
+            'This communication documents multiple incidents in a single message and focuses on '
+            'peer perception and disruption. This pattern sometimes precedes a request for managed '
+            'removal or a formal behaviour plan. It does not necessarily indicate bad intent — '
+            'schools document incidents routinely. However when combined with head of year involvement '
+            'it is worth noting what is being put on record and why.'
+        ),
+        'what_to_watch': 'Watch for follow-up communications that reference this email as establishing a pattern.',
+    },
+    {
+        'id': 'hoy_involvement',
+        'label': 'Head of year involvement',
+        'trigger_words': ['head of year', 'HOY', 'form tutor', 'cc', 'copied in'],
+        'description': (
+            'Head of year involvement typically signals the disruption management pathway rather than '
+            'the SEND support pathway. This does not mean the communication is adversarial — HOYs '
+            'often have genuine care for students. It does mean the frame of reference is behaviour '
+            'management rather than needs-led support.'
+        ),
+        'what_to_watch': 'Check whether SENCO or SEND support staff are involved. If not, consider whether the communication should be redirected.',
+    },
+    {
+        'id': 'reassurance_without_evidence',
+        'label': 'Reassurance without evidence',
+        'trigger_words': ['reassure you', 'please be assured', 'rest assured', 'want you to know', 'not concerned'],
+        'description': (
+            'Reassurance language is common in school correspondence and is often genuine. '
+            'It becomes significant when it appears in response to specific requests for documentation. '
+            'A reassurance is not a record. If you asked for something specific and received '
+            'reassurance instead, the specific request remains outstanding.'
+        ),
+        'what_to_watch': 'Note what was specifically requested and whether the reassurance addresses it or replaces it.',
+    },
+    {
+        'id': 'provision_substitution',
+        'label': 'Provision substitution',
+        'trigger_words': ['through', 'via', 'as part of', 'during lunch', 'informally', 'gentle', 'we support'],
+        'description': (
+            'When a school describes provision in response to a question about statutory provision, '
+            'check whether what is described matches what the EHCP specifies. Informal or universal '
+            'provision described in response to a question about specific statutory provision '
+            'does not confirm that statutory provision is being delivered.'
+        ),
+        'what_to_watch': 'Compare the description against the exact wording in Section F. If they do not match, the question was not answered.',
+    },
+    {
+        'id': 'apdr_continuous',
+        'label': 'APDR described as ongoing',
+        'trigger_words': ['runs continuously', 'ongoing', 'continuous', 'always running', 'live process', 'live document'],
+        'description': (
+            'The APDR cycle is Assess, Plan, Do, Review. Review is a defined event — '
+            'a documented moment where progress is formally assessed and new targets are set. '
+            'It cannot run continuously. Describing APDR as ongoing or continuous '
+            'either conflates the stages or avoids confirming when the last formal Review '
+            'took place and what it produced.'
+        ),
+        'what_to_watch': 'Ask for the date of the last formal Review and its documented outcomes.',
+    },
+    {
+        'id': 'recording_admission',
+        'label': 'Recording inadequacy admission',
+        'trigger_words': ['improve how we record', 'new software', 'looking to improve', 'working on our systems', 'better recording'],
+        'description': (
+            'Statements about plans to improve recording systems confirm that current recording '
+            'is insufficient. This is framed positively but it also means the records you have '
+            'requested may not currently exist in an adequate form. '
+            'Any records subsequently produced should be assessed against when they were created.'
+        ),
+        'what_to_watch': 'Note the date of this statement. If records are later produced, compare their content against what was admitted here.',
+    },
+    {
+        'id': 'collaborative_genuine',
+        'label': 'Genuine collaborative signal',
+        'trigger_words': ['would really value your thoughts', 'keep you updated', 'work together', 'named programme', 'will record', 'structured intervention'],
+        'description': (
+            'This communication contains specific commitments — named deliverer, named programme, '
+            'recording commitment, parental update. These are positive signals that distinguish '
+            'genuine collaborative intent from relationship management language. '
+            'When a school makes specific commitments they are worth welcoming and noting.'
+        ),
+        'what_to_watch': 'Record these commitments as on the record. They become the baseline against which future delivery is measured.',
+    },
 ]
 
 # ─────────────────────────────────────────────
@@ -305,10 +385,10 @@ def read_file(uploaded_file):
             text = "".join(page.get_text() for page in doc)
             doc.close()
             if len(text.strip()) < 50:
-                return None, "This PDF appears to be image-based and could not be read as text. Try printing it to PDF from the original application."
+                return None, "This PDF appears to be image-based. Try printing it to PDF from the original application."
             return text, None
         except Exception:
-            return None, "This PDF could not be read. If it is password protected, open it, select print, and save as PDF — this removes the lock on most LA documents."
+            return None, "This PDF could not be read. If password protected, open it, select print, and save as PDF."
     elif name.endswith('.docx') or name.endswith('.doc'):
         try:
             doc = DocxDocument(uploaded_file)
@@ -318,27 +398,21 @@ def read_file(uploaded_file):
                     for cell in row.cells:
                         text += "\n" + cell.text
             if len(text.strip()) < 50:
-                return None, "This Word document appears to be empty or could not be read."
+                return None, "This Word document appears to be empty."
             return text, None
         except Exception:
-            return None, "This Word document could not be read. If password protected, open it in Word, print to PDF, and upload the PDF instead."
+            return None, "This Word document could not be read. If password protected, open it in Word and save as PDF."
     else:
-        return None, "Format not supported. Please upload a PDF or Word document (.docx)."
+        return None, "Format not supported. Please upload a PDF or Word document."
 
 def identify_sections(text):
     sections = {}
     patterns = {
         'A': r'(?:SECTION\s+A|Section\s+A)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[B-K]|Section\s+[B-K])|$)',
         'B': r'(?:SECTION\s+B|Section\s+B)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[C-K]|Section\s+[C-K])|$)',
-        'C': r'(?:SECTION\s+C|Section\s+C)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[D-K]|Section\s+[D-K])|$)',
-        'D': r'(?:SECTION\s+D|Section\s+D)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[E-K]|Section\s+[E-K])|$)',
         'E': r'(?:SECTION\s+E|Section\s+E)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[F-K]|Section\s+[F-K])|$)',
         'F': r'(?:SECTION\s+F|Section\s+F)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[G-K]|Section\s+[G-K])|$)',
-        'G': r'(?:SECTION\s+G|Section\s+G)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[H-K]|Section\s+[H-K])|$)',
-        'H': r'(?:SECTION\s+H|Section\s+H)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[I-K]|Section\s+[I-K])|$)',
         'I': r'(?:SECTION\s+I|Section\s+I)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+[J-K]|Section\s+[J-K])|$)',
-        'J': r'(?:SECTION\s+J|Section\s+J)[:\s\-–—]*[^\n]*\n(.*?)(?=(?:SECTION\s+K|Section\s+K)|$)',
-        'K': r'(?:SECTION\s+K|Section\s+K)[:\s\-–—]*[^\n]*\n(.*?)$',
     }
     for key, pattern in patterns.items():
         match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
@@ -361,20 +435,14 @@ def extract_entries(text):
 
 def detect_doc_type(text):
     tl = text.lower()
-    if any(kw in tl for kw in ['send policy', 'accessibility plan', 'behaviour policy', 'inclusion policy']):
+    if any(kw in tl for kw in ['send policy', 'accessibility plan', 'behaviour policy']):
         return 'policy'
-    if any(kw in tl for kw in ['dear', 'kind regards', 'subject:', 'thank you for attending', 'thank you for coming']):
+    if any(kw in tl for kw in ['dear', 'kind regards', 'best wishes', 'subject:']):
         return 'email'
-    if any(kw in tl for kw in ['speaker', 'speaker 1', 'speaker 2', 'transcript', '[end]', 'yeah um', 'um ']):
+    if any(kw in tl for kw in ['speaker 1', 'speaker 2', 'transcript', '[end]']):
         return 'transcript'
-    if any(kw in tl for kw in ['section a', 'section b', 'section e', 'section f', 'education health and care']):
+    if any(kw in tl for kw in ['section a', 'section b', 'section f', 'education health and care']):
         return 'ehcp'
-    if any(kw in tl for kw in ['educational psychologist', 'ep report', 'cognitive ability', 'standardised score']):
-        return 'ep_report'
-    if any(kw in tl for kw in ['occupational therapy', 'fine motor', 'sensory processing', 'ot report']):
-        return 'ot_report'
-    if any(kw in tl for kw in ['speech and language', 'salt report', 'communication assessment', 'language skills']):
-        return 'salt_report'
     return 'other'
 
 # ─────────────────────────────────────────────
@@ -434,19 +502,15 @@ def chk_prohibited(text):
     return findings
 
 def chk_universal(text):
-    tl = text.lower()
-    return [i for i in UNIVERSAL if i in tl]
+    return [i for i in UNIVERSAL if i in text.lower()]
 
 def chk_laundering(text):
-    patterns = [r'\bwould benefit from\b', r'\bit is recommended\b',
-                r'\bit is suggested\b', r'\bmay benefit from\b']
+    patterns = [r'\bwould benefit from\b', r'\bit is recommended\b', r'\bmay benefit from\b']
     return [p.replace(r'\b', '') for p in patterns if re.search(p, text, re.IGNORECASE)]
 
 def chk_dilution(text):
-    patterns = [r'\bshared with other\b', r'\bmay be shared\b',
-                r'\bas resources allow\b', r'\bsubject to availability\b',
-                r'\bwhen staff are available\b', r'\bdepending on resources\b',
-                r'\bwider class\b', r"\bat the school'?s discretion\b"]
+    patterns = [r'\bshared with other\b', r'\bmay be shared\b', r'\bas resources allow\b',
+                r'\bsubject to availability\b', r'\bwider class\b']
     return [p.replace(r'\b', '') for p in patterns if re.search(p, text, re.IGNORECASE)]
 
 def chk_policy(entry, policy):
@@ -458,27 +522,20 @@ def chk_policy(entry, policy):
     commitments = [
         ('1:1 support', ['1:1', 'one to one', 'individual support']),
         ('named key worker', ['key worker', 'key person']),
-        ('sensory assessment', ['sensory assessment', 'sensory profile', 'sensory audit']),
+        ('sensory assessment', ['sensory assessment', 'sensory profile']),
         ('home-school communication', ['parent update', 'home school']),
         ('risk assessment', ['risk assess']),
         ('accessibility arrangements', ['accessible', 'adaptations']),
     ]
     for label, keywords in commitments:
         if any(kw in pl for kw in keywords) and not any(kw in el for kw in keywords):
-            gaps.append(
-                f"The school's own policy references {label}. "
-                f"This does not appear in this provision entry. "
-                f"The school cannot dispute what its own policy commits to — "
-                f"worth raising at annual review."
-            )
+            gaps.append(f"The school's own policy references {label}. This does not appear in this provision entry. The school cannot dispute what its own policy commits to.")
     return gaps
 
 def is_compliant(text, quant):
     has_must = bool(re.search(r'\bmust\b', text, re.IGNORECASE))
-    prohibited = chk_prohibited(text)
-    universal = chk_universal(text)
     return (has_must and quant.get('frequency') and quant.get('duration')
-            and quant.get('role') and not prohibited and not universal)
+            and quant.get('role') and not chk_prohibited(text) and not chk_universal(text))
 
 def get_ofsted(text):
     tl = text.lower()
@@ -503,52 +560,46 @@ def audit_entry(entry_text, entry_number, policy_text=''):
     for term, exp in prohibited:
         unlawful.append(f'"{term}" — {exp}.')
     if not quant['frequency']:
-        unlawful.append('No frequency specified — how often provision is delivered is not stated. The SEND Code of Practice requires provision to be specified and quantified. Without frequency this provision cannot be monitored or enforced.')
+        unlawful.append('No frequency specified — how often provision is delivered is not stated. The SEND Code of Practice requires provision to be specified and quantified.')
     if not quant['duration']:
         unlawful.append('No duration specified — the length of each session is not stated. Provision without quantification cannot be measured or challenged at annual review.')
     if not quant['role']:
-        unlawful.append('No deliverer role specified — who provides this provision and at what qualification or training level is not stated. A lawful duty requires a named responsible role, not just a description of activity.')
+        unlawful.append('No deliverer role specified — who provides this provision and at what qualification or training level is not stated.')
 
     patterns = []
     if universal:
-        patterns.append('Universal provision identified — this entry describes what the school is already required to provide all pupils. Its presence in Section F creates no additional lawful entitlement specific to this child. Section F must contain provision above and beyond the school\'s universal offer.')
+        patterns.append('Universal provision identified — this entry describes what the school is already required to provide all pupils. Its presence in Section F creates no additional lawful entitlement specific to this child.')
     if laundering:
-        patterns.append('Recommendation laundering identified — assessment or report language has been copied into Section F without being converted into a specified lawful commitment. Referencing the existence of professional advice without acting on it creates no enforceable duty under the Children and Families Act 2014.')
+        patterns.append('Recommendation laundering identified — assessment language has been copied into Section F without being converted into a specified lawful commitment.')
     if dilution:
-        patterns.append('Dilution clause identified — wording allows this provision to be shared or made conditional on school resources or staffing. An individual statutory entitlement cannot be diluted at the school\'s discretion.')
+        patterns.append('Dilution clause identified — wording allows this provision to be shared or made conditional on school resources.')
 
     best_practice = []
     if not quant['named_individual']:
-        best_practice.append(
-            'No named accountable person — the lawful requirement is that the deliverer role '
-            'and training level are specified. As a best practice consideration, naming the '
-            'SENCO as the accountable person supports continuity and makes monitoring easier '
-            'to evidence at annual review and at inspection. '
-            'This is a wellbeing recommendation, not a lawful requirement.'
-        )
+        best_practice.append('No named accountable person — the lawful requirement is that the deliverer role and training level are specified. As best practice, naming the SENCO as the accountable person supports continuity. This is a wellbeing recommendation, not a lawful requirement.')
     if not re.search(r'\b(review|reviewed|assess|monitor|evaluated)\b', entry_text, re.IGNORECASE):
-        best_practice.append('No review mechanism stated — provision without a stated review mechanism cannot be assessed for effectiveness. Consider asking at annual review how the effectiveness of this provision is assessed and recorded.')
+        best_practice.append('No review mechanism stated — provision without a stated review mechanism cannot be assessed for effectiveness.')
 
     required = []
     if not compliant:
         if not quant['frequency']:
-            required.append('Frequency must be stated — number of sessions per week or per term, specified plainly')
+            required.append('Frequency must be stated — number of sessions per week or per term')
         if not quant['duration']:
             required.append('Duration must be stated — length of each session in minutes')
         if not quant['role']:
-            required.append('Deliverer role must be named — role title and relevant qualification or training level specified')
+            required.append('Deliverer role must be named — role title and relevant qualification or training level')
         if universal:
-            required.append('Entry must describe provision additional to the universal offer — specific to this child\'s identified needs')
+            required.append('Entry must describe provision additional to the universal offer')
         if laundering:
-            required.append('Professional recommendations must be reproduced as specified provision — not referenced as existing advice')
+            required.append('Professional recommendations must be reproduced as specified provision')
         if dilution:
-            required.append('Shared or conditional wording must be removed — provision specified as an individual guaranteed entitlement')
+            required.append('Shared or conditional wording must be removed')
         required.append(
             'Mandatory delivery log — all provision recorded in a dated delivery log '
             'showing date, duration, who delivered, and any relevant observations. '
             'This is the evidence base for the Do stage of the school\'s statutory '
             'APDR (Assess, Plan, Do, Review) cycle. Without it the Review stage '
-            'cannot be conducted accurately and the cycle breaks down.'
+            'cannot be conducted accurately.'
         )
 
     tactical = [
@@ -558,11 +609,7 @@ def audit_entry(entry_text, entry_number, policy_text=''):
         'Lack of evidence is evidence of lack.'
     ]
     if not compliant:
-        tactical.append(
-            'At your next annual review this entry must be rewritten to full specification standard. '
-            'FRED will remind you of this finding as your review approaches — '
-            'enter your review date at the bottom of this report.'
-        )
+        tactical.append('At your next annual review this entry must be rewritten to full specification standard. FRED will remind you of this finding as your review approaches.')
     if dilution:
         tactical.append('Request written confirmation of how many other pupils share this provision and what proportion of the named support this child actually receives.')
 
@@ -590,17 +637,48 @@ def audit_section_e(text):
         unlawful = []
         bp = []
         if not re.search(r'\b(currently|baseline|starting point|at present|now)\b', ol):
-            unlawful.append('No baseline stated — without a starting point progress cannot be objectively measured at annual review. The SEND Code of Practice requires outcomes to be measurable.')
+            unlawful.append('No baseline stated — without a starting point progress cannot be objectively measured at annual review.')
         if not re.search(r'\b(\d+|percentage|score|level|times|independently|consistently|measured by|assessed)\b', ol):
             unlawful.append('No measurable indicator — success cannot be objectively assessed. An outcome without a measurable indicator cannot be reviewed under the APDR cycle.')
         if not re.search(r'\b(by|within|term|year|month|weeks?|annual review|end of)\b', ol):
-            bp.append('No timeframe stated — when this outcome should be achieved is not specified. This supports effective APDR cycle review and annual review preparation.')
+            bp.append('No timeframe stated — when this outcome should be achieved is not specified.')
         results.append({'outcome_number': i+1, 'outcome_text': outcome, 'unlawful_failures': unlawful, 'best_practice_gaps': bp})
     return results
 
 # ─────────────────────────────────────────────
 # CORRESPONDENCE ENGINE
 # ─────────────────────────────────────────────
+
+VACUUM_PATTERNS = [
+    (r'\b(happening a lot recently|not the first time|previous incidents|similar before|we have noticed before|as has been the case|happening more|increasingly)\b',
+     'frequency', 'This statement implies a documented history of incidents. Request the records.'),
+    (r'\b(tried to address|spoken to.*before|discussed previously|put things in place|tried before|we have spoken)\b',
+     'previous_attempt', 'This statement implies previous strategies were deployed. Request documentation of what was tried and what outcomes were recorded.'),
+    (r'\b(we have noticed|we have observed|staff have been aware|keeping an eye on|been monitoring|we have seen)\b',
+     'observation', 'Observation without a formal record is not evidenced monitoring. Request the observation log.'),
+    (r'\b(runs continuously|ongoing process|always running|live process|continuous|live document)\b',
+     'apdr_continuous', 'The APDR cycle cannot run continuously. Review is a defined event with documented outcomes. Request the date of the last formal Review and its recorded outcomes.'),
+]
+
+INTENT_SIGNALS = {
+    'case_building': [
+        'unpredictable', 'other students are worried', 'counts as a sanction',
+        'previous incidents', 'not the first time', 'coming very close to',
+        'aggressive reactions', 'said he wants to kill', 'worrying for others',
+    ],
+    'hoy_signal': [
+        'head of year', 'hoy', 'form tutor raised', 'cc', 'copied in',
+    ],
+    'collaborative': [
+        'would really value your thoughts', 'will record', 'keep you updated',
+        'named programme', 'structured intervention', 'working with you',
+        'hear both sides', 'took his needs into account',
+    ],
+    'reassurance_without_evidence': [
+        'reassure you', 'please be assured', 'rest assured',
+        'want you to know', 'not currently concerned', 'no pattern',
+    ],
+}
 
 UNENFORCEABLE_EMAIL = [
     ('in place', 'Claims provision is in place without referencing any delivery record'),
@@ -609,98 +687,218 @@ UNENFORCEABLE_EMAIL = [
     ('consistently', 'A claim — the delivery log is the evidence'),
     ('embedded', 'Not a quantified description of delivery'),
     ('responsive', 'Reactive delivery is not specified provision'),
-    ('tailored to his needs', 'Undefined without specifying what the tailoring consists of'),
-    ('some flexibility', 'Flexibility in EHCP provision is not permitted — provision must be delivered as specified'),
+    ('some flexibility', 'Flexibility in EHCP provision is not permitted'),
     ('monitor', 'Monitoring without a stated recording method is unverifiable'),
+    ('runs continuously', 'The APDR cycle cannot run continuously — Review is a defined event not a state'),
 ]
 
-def analyse_correspondence(email_text, ehcp_sections, transcript_text=''):
-    analysis = {
-        'unenforceable_claims': [],
-        'contradictions_with_transcript': [],
-        'deflected_items': [],
-        'addressed_items': [],
+def detect_intent(email_text):
+    tl = email_text.lower()
+    case_building_score = sum(1 for signal in INTENT_SIGNALS['case_building'] if signal in tl)
+    hoy_score = sum(1 for signal in INTENT_SIGNALS['hoy_signal'] if signal in tl)
+    collaborative_score = sum(1 for signal in INTENT_SIGNALS['collaborative'] if signal in tl)
+    reassurance_score = sum(1 for signal in INTENT_SIGNALS['reassurance_without_evidence'] if signal in tl)
+    if case_building_score >= 2 or hoy_score >= 1:
+        if collaborative_score >= 2:
+            intent = 'mixed'
+        else:
+            intent = 'case_building'
+    elif collaborative_score >= 2:
+        intent = 'collaborative'
+    else:
+        intent = 'mixed'
+    return {
+        'intent': intent,
+        'case_building_score': case_building_score,
+        'hoy_signal': hoy_score > 0,
+        'collaborative_score': collaborative_score,
+        'reassurance_score': reassurance_score,
     }
-    el = email_text.lower()
 
-    for term, exp in UNENFORCEABLE_EMAIL:
-        if term in el:
-            analysis['unenforceable_claims'].append(
-                f'"{term}" — {exp}. A delivery log is required to substantiate this claim. Lack of evidence is evidence of lack.'
+def detect_vacuum_statements(email_text):
+    findings = []
+    for pattern, vacuum_type, explanation in VACUUM_PATTERNS:
+        matches = re.findall(pattern, email_text, re.IGNORECASE)
+        if matches:
+            findings.append({
+                'type': vacuum_type,
+                'matched': matches[0] if isinstance(matches[0], str) else matches[0][0],
+                'explanation': explanation,
+            })
+    return findings
+
+def match_what_if_scenarios(email_text):
+    tl = email_text.lower()
+    matched = []
+    for scenario in WHAT_IF_SCENARIOS:
+        if any(trigger in tl for trigger in scenario['trigger_words']):
+            matched.append(scenario)
+    return matched
+
+def generate_three_findings(email_text, ehcp_sections, transcript_text='', history_texts=None):
+    findings = []
+    tl = email_text.lower()
+    if re.search(r'\b(runs continuously|ongoing|live process|continuous)\b', tl, re.IGNORECASE):
+        extract = ''
+        for match in re.finditer(r'[^.]*(?:runs continuously|ongoing|live process|continuous)[^.]*\.', email_text, re.IGNORECASE):
+            extract = match.group(0).strip()
+            break
+        if not extract:
+            extract = 'APDR described as ongoing or continuous'
+        findings.append({
+            'label': 'APDR described as continuous',
+            'extract': extract,
+            'comment': (
+                'The APDR cycle is Assess, Plan, Do, Review. Review is a defined event — '
+                'a documented moment where progress is formally assessed and new targets set. '
+                'It cannot run continuously. Ask for the date of the last formal Review and its documented outcomes.'
             )
-
+        })
     if 'F' in ehcp_sections:
         fl = ehcp_sections['F'].lower()
         provisions = [
-            ('social skills group', ['social skills', 'social group']),
-            ('emotional regulation sessions', ['emotional regulation', 'emotional literacy']),
-            ('sensory and movement breaks', ['sensory', 'movement break', 'calm space']),
-            ('adult support', ['adult support', 'lsa', 'full-time support']),
-            ('speech and language support', ['speech', 'language', 'salt', 'communication']),
-            ('occupational therapy', ['fine motor', 'ot', 'occupational']),
+            ('social skills group', ['social skills', 'social group'], ['lunch', 'lunchtime', 'bridge', 'informal', 'gentle']),
+            ('emotional regulation sessions', ['emotional regulation', 'emotional literacy'], ['general', 'as needed', 'when needed']),
+            ('sensory breaks', ['sensory break', 'movement break'], ['when needed', 'responsive', 'as required']),
         ]
-        for label, keywords in provisions:
-            in_ehcp = any(kw in fl for kw in keywords)
-            in_email = any(kw in el for kw in keywords)
-            if in_ehcp and not in_email:
-                analysis['deflected_items'].append(
-                    f'{label.title()} — specified in the EHCP but not addressed in this email. No confirmation of delivery has been provided.'
-                )
-            elif in_ehcp and in_email:
-                analysis['addressed_items'].append(
-                    f'{label.title()} — referenced in both the EHCP and this email. Request the delivery log to substantiate any claims of delivery.'
-                )
+        for label, ehcp_keywords, substitution_keywords in provisions:
+            in_ehcp = any(kw in fl for kw in ehcp_keywords)
+            in_email = any(kw in tl for kw in ehcp_keywords)
+            substituted = any(kw in tl for kw in substitution_keywords)
+            if in_ehcp and in_email and substituted:
+                extract = ''
+                for kw in ehcp_keywords:
+                    matches = list(re.finditer(rf'[^.]*{kw}[^.]*\.', email_text, re.IGNORECASE))
+                    if matches:
+                        extract = matches[0].group(0).strip()
+                        break
+                findings.append({
+                    'label': f'Provision substitution — {label}',
+                    'extract': extract or f'Description of {label} in email',
+                    'comment': (
+                        f'Your EHCP specifies {label} as statutory provision. '
+                        f'The email describes a different or informal arrangement. '
+                        f'The question of how the statutory provision is being delivered was not answered.'
+                    )
+                })
+                break
+    if re.search(r'\b(improve how we record|new software|looking to improve|better recording|working on our systems)\b', tl, re.IGNORECASE):
+        extract = ''
+        for match in re.finditer(r'[^.]*(?:improve how we record|new software|looking to improve|better recording)[^.]*\.', email_text, re.IGNORECASE):
+            extract = match.group(0).strip()
+            break
+        findings.append({
+            'label': 'Recording inadequacy admitted',
+            'extract': extract or 'Statement about improving recording systems',
+            'comment': (
+                'This statement confirms that current recording is insufficient. '
+                'Any records subsequently produced should be assessed against when they were created.'
+            )
+        })
+    vacuum = detect_vacuum_statements(email_text)
+    if vacuum and len(findings) < 3:
+        v = vacuum[0]
+        findings.append({
+            'label': f'Implied history — {v["type"].replace("_", " ")}',
+            'extract': f'"{v["matched"]}"',
+            'comment': v['explanation'],
+        })
+    for term, exp in UNENFORCEABLE_EMAIL:
+        if term in tl and len(findings) < 3:
+            extract = ''
+            for match in re.finditer(rf'[^.]*{re.escape(term)}[^.]*\.', email_text, re.IGNORECASE):
+                extract = match.group(0).strip()
+                break
+            findings.append({
+                'label': f'Unsubstantiated claim — "{term}"',
+                'extract': extract or f'Use of "{term}" in email',
+                'comment': f'{exp}. A delivery log is required to substantiate this claim.',
+            })
+            break
+    return findings[:3]
 
-    if transcript_text:
-        tl = transcript_text.lower()
-        if ('not every week' in tl or 'staffing' in tl) and 'social' in tl:
-            if 'weekly' in el or 'in place' in el:
-                analysis['contradictions_with_transcript'].append(
-                    'Social skills group — the transcript records a direct admission that sessions have not taken place every week and that staffing has been a difficulty. The email states sessions are in place weekly. These two accounts are not consistent. Written clarification and the full delivery record are required.'
-                )
-        if "don't formally track" in tl or 'not formally track' in tl or 'staff just know' in tl:
-            if 'sensory' in el and ('regular' in el or 'responsive' in el):
-                analysis['contradictions_with_transcript'].append(
-                    'Sensory breaks — the transcript records that provision is not formally tracked and that no delivery log exists. The email describes provision as regular and responsive. Without a delivery log these claims cannot be evidenced. Lack of evidence is evidence of lack.'
-                )
-        if 'someone else' in tl or 'if not me' in tl:
-            if 'full-time support' in el or 'adult support' in el:
-                analysis['contradictions_with_transcript'].append(
-                    'Adult support — the transcript records that support is provided by different adults across the day without a named accountable person. The email presents full-time support as a consistent guaranteed provision. Please confirm in writing the roles, training, and accountability arrangements for all adults providing support.'
-                )
-        if 'mostly mornings' in tl or ('mornings' in tl and 'transitions' in tl):
-            if 'consistently across' in el or 'embedded consistently' in el:
-                analysis['contradictions_with_transcript'].append(
-                    'Visual supports — the transcript describes use as mostly during mornings and transitions. The email states these are embedded consistently across the day. Please clarify which is accurate and provide the delivery record.'
-                )
-    return analysis
+def generate_on_the_record(email_text):
+    records = []
+    tl = email_text.lower()
+    commitment_patterns = [
+        (r'will record', 'Commitment to record sessions made in writing'),
+        (r'will keep you updated', 'Commitment to keep parents updated made in writing'),
+        (r'will share', 'Commitment to share records made in writing'),
+        (r'will speak to', 'Commitment to consult named colleague made in writing'),
+        (r'will be in touch', 'Commitment to communicate made in writing'),
+        (r'you will.*be kept.*informed', 'Commitment to inform parents made in writing'),
+        (r'not currently concerned', 'School has stated no current concern about pattern — dated'),
+        (r'oversee this process', 'Named individual has taken responsibility for APDR oversight'),
+        (r'recently purchased', 'Admission that new systems are being put in place — implies current systems inadequate'),
+    ]
+    for pattern, description in commitment_patterns:
+        if re.search(pattern, tl, re.IGNORECASE):
+            records.append(description)
+    return records
+
+def generate_tone_read(intent_result, email_text):
+    intent = intent_result['intent']
+    hoy = intent_result['hoy_signal']
+    reassurance = intent_result['reassurance_score']
+    if intent == 'case_building':
+        base = 'This communication shows features of incident documentation. Multiple events are recorded in a single message with focus on peer perception and disruption. '
+        if hoy:
+            base += 'Head of year involvement suggests the disruption management pathway rather than the SEND support pathway. '
+        base += 'This does not necessarily indicate adversarial intent — schools document incidents routinely. What is being put on record and why is worth noting.'
+    elif intent == 'collaborative':
+        base = 'This communication reads as genuinely collaborative. The focus is on the child\'s experience, named commitments are made, and the tone is solution-focused rather than incident-focused.'
+    else:
+        base = 'This communication is mixed. The tone is warm and the care appears genuine. At the same time, specific requests from previous correspondence have not been fully answered and reassurance language appears where evidence was requested. '
+        if reassurance > 0:
+            base += 'Reassurance is not a record. The specific requests remain outstanding.'
+    return base
+
+def generate_ehcp_compliance_check(email_text, ehcp_sections, requests_made=None):
+    checks = []
+    tl = email_text.lower()
+    if 'F' in ehcp_sections:
+        fl = ehcp_sections['F'].lower()
+        if 'social skills' in fl:
+            if 'social skills' in tl or 'bridge' in tl or 'lunch' in tl:
+                if re.search(r'\b(weekly|sessions|how many|delivered by|recorded)\b', tl):
+                    checks.append(('Social skills provision', 'Partially addressed — description provided but sessions count, delivery record, and named deliverer not confirmed.', 'amber'))
+                else:
+                    checks.append(('Social skills provision', 'Not fully addressed — informal provision described but statutory provision delivery not evidenced.', 'red'))
+            else:
+                checks.append(('Social skills provision', 'Not addressed in this email.', 'red'))
+        if 'emotional regulation' in fl or 'emotional literacy' in fl:
+            if 'emotional' in tl or 'volcano' in tl:
+                checks.append(('Emotional regulation provision', 'Referenced — delivery record not confirmed.', 'amber'))
+            else:
+                checks.append(('Emotional regulation provision', 'Not addressed in this email.', 'red'))
+    if re.search(r'\b(apdr|assess plan do review|review cycle)\b', tl, re.IGNORECASE):
+        if re.search(r'\b(last reviewed|review date|last formal|documented outcomes|new targets set)\b', tl, re.IGNORECASE):
+            checks.append(('APDR cycle', 'Partially addressed — responsibility named but last formal review date and documented outcomes not provided.', 'amber'))
+        else:
+            checks.append(('APDR cycle', 'Not evidenced — described as ongoing but no formal review date or documented outcomes provided.', 'red'))
+    else:
+        checks.append(('APDR cycle', 'Not addressed in this email.', 'red'))
+    return checks
 
 def generate_post_meeting_email(analysis, answers):
     tone = answers.get('q5', 'Constructive but cautious')
     openings = {
-        'Warm and collaborative': 'Thank you for the meeting and for your follow up email. We found the discussion helpful and want to ensure our understanding of what was discussed is accurately recorded.',
-        'Constructive but cautious': 'Thank you for the meeting and for your follow up email. We write to ensure our understanding of what was discussed is accurately recorded.',
-        'Professionally firm': 'Thank you for your follow up email. We write to record our understanding of the meeting, which differs in some respects from the summary you have provided.',
-        'Formally assertive': 'We write further to the recent meeting and your subsequent email. We wish to place on record our understanding of what was agreed and what remains unresolved.',
-        'Rights-based and formal': 'We write further to the meeting and your subsequent correspondence. The following sets out our understanding of what was discussed and what outstanding matters require a written response.',
+        'Warm and collaborative': 'Thank you for the meeting and for your follow up. We want to ensure our understanding of what was discussed is accurately recorded.',
+        'Constructive but cautious': 'Thank you for the meeting and for your follow up. We write to ensure our understanding is accurately recorded.',
+        'Professionally firm': 'We write to record our understanding of the meeting, which differs in some respects from the summary provided.',
+        'Formally assertive': 'We write to place on record our understanding of what was agreed and what remains unresolved.',
+        'Rights-based and formal': 'The following sets out our understanding of what was discussed and what outstanding matters require a written response.',
     }
     parts = [openings.get(tone, openings['Constructive but cautious']), '']
-    if analysis['contradictions_with_transcript'] or analysis['deflected_items']:
+    if analysis.get('contradictions'):
         parts.append('What requires a written response\n')
-        for c in analysis['contradictions_with_transcript']:
+        for c in analysis['contradictions']:
             parts.append(c + '\n')
-        for d in analysis['deflected_items']:
+    if analysis.get('deflected'):
+        for d in analysis['deflected']:
             parts.append(d + '\n')
-    if analysis['addressed_items']:
-        parts.append('Provision referenced — delivery log requested\n')
-        for a in analysis['addressed_items']:
-            parts.append(f'— {a.split(" — ")[0]}')
     parts.append('')
-    parts.append(
-        'Please let us know within five working days if anything above does not reflect '
-        'your understanding of the meeting. If we do not hear from you within that time '
-        'we will treat this summary as the agreed record.'
-    )
+    parts.append('Please let us know within five working days if anything above does not reflect your understanding. If we do not hear from you we will treat this as the agreed record.')
     return '\n'.join(parts)
 
 # ─────────────────────────────────────────────
@@ -713,99 +911,185 @@ def render_traffic_legend():
         <div class="fred-traffic-title">Here is how FRED colour codes its findings</div>
         <div class="fred-trow">
             <div class="fred-tdot tdot-red"></div>
-            <div class="fred-ttext">
-                <strong>Red — lawful requirement not met.</strong>
-                The provision does not meet the statutory standard set by the
-                Children and Families Act 2014. Must be addressed at annual review.
-            </div>
+            <div class="fred-ttext"><strong>Red — lawful requirement not met.</strong> Must be addressed at annual review.</div>
         </div>
         <div class="fred-trow">
             <div class="fred-tdot tdot-amber"></div>
-            <div class="fred-ttext">
-                <strong>Amber — best practice gap.</strong>
-                Meets the minimum lawful standard but falls short of what good
-                practice recommends. Worth raising at annual review.
-            </div>
+            <div class="fred-ttext"><strong>Amber — best practice gap.</strong> Meets minimum lawful standard. Worth raising at annual review.</div>
         </div>
         <div class="fred-trow">
             <div class="fred-tdot tdot-green"></div>
-            <div class="fred-ttext">
-                <strong>Green — compliant.</strong>
-                Meets the lawful standard. Use compliant entries as the
-                benchmark when challenging non-compliant ones.
-            </div>
+            <div class="fred-ttext"><strong>Green — compliant.</strong> Meets the lawful standard.</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-def render_sneak_peek(result):
-    entry_preview = result['entry_text'][:200]
-    unlawful = result['unlawful_deficiencies'][:3]
-    count_remaining = max(0, (len(st.session_state.report_results) - 1))
-
+def render_three_findings(findings, tone_read, on_record, compliance_checks, what_if_matches, intent_result):
+    st.markdown("## Your correspondence briefing")
+    st.markdown("*Three findings. Read in five minutes. You decide what to do with them.*")
+    intent = intent_result['intent']
+    intent_labels = {
+        'case_building': ('⚠ Case building signals detected', RED),
+        'collaborative': ('✓ Collaborative signals present', GREEN),
+        'mixed': ('◉ Mixed — genuine care and gaps present', AMBER),
+    }
+    label, colour = intent_labels.get(intent, ('Intent unclear', GREY))
     st.markdown(f"""
-    <div class="fred-sneak-header">FRED has read your plan — here is one finding</div>
-    <div class="fred-sneak-body">
-        <div class="fred-sneak-entry">"{entry_preview}{'...' if len(result['entry_text']) > 200 else ''}"</div>
-        {''.join(f'<div class="unlawful-flag">⚠ {d}</div>' for d in unlawful)}
-        <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
-        <div class="evidence-line">Lack of evidence is evidence of lack.</div>
-    </div>
-    <div class="fred-sneak-more">
-        <div class="fred-sneak-count">This is one entry from Section F of your plan</div>
-        <div class="fred-sneak-sub">Your full report covers every provision entry across Section F and Section E outcomes — with tactical advice and required specification for each finding.</div>
-        <div class="fred-sneak-ready">Your report is ready.</div>
+    <div style="background:{colour}20;border-left:4px solid {colour};
+        padding:10px 14px;border-radius:0 6px 6px 0;font-size:13px;
+        font-weight:500;color:{colour};margin-bottom:16px;">
+        {label}
+        {'&nbsp;&nbsp;|&nbsp;&nbsp;Head of year involvement noted' if intent_result['hoy_signal'] else ''}
     </div>
     """, unsafe_allow_html=True)
-
-def render_correspondence(analysis, post_meeting_email):
-    st.markdown("## Correspondence analysis")
-    if analysis['contradictions_with_transcript']:
-        st.markdown("### Contradictions — transcript vs email")
-        st.markdown("*The following claims in the email are not consistent with what the transcript records.*")
-        for c in analysis['contradictions_with_transcript']:
-            st.markdown(f'<div class="contradiction-flag">⚠ {c}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="evidence-line">Lack of evidence is evidence of lack.</div>', unsafe_allow_html=True)
-    if analysis['unenforceable_claims']:
-        st.markdown("### Unsubstantiated claims in email")
-        for u in analysis['unenforceable_claims']:
-            st.markdown(f'<div class="unlawful-flag">⚠ {u}</div>', unsafe_allow_html=True)
-    if analysis['deflected_items']:
-        st.markdown("### Provision not addressed in email")
-        for d in analysis['deflected_items']:
-            st.markdown(f'<div class="bestpractice-flag">◉ {d}</div>', unsafe_allow_html=True)
-    if analysis['addressed_items']:
-        st.markdown("### Provision referenced — delivery log required")
-        for a in analysis['addressed_items']:
-            st.markdown(f'<div class="tactical-flag">→ {a}</div>', unsafe_allow_html=True)
+    if findings:
+        for i, finding in enumerate(findings, 1):
+            st.markdown(f"""
+            <div class="finding-card">
+                <div class="finding-header">Finding {i} — {finding['label']}</div>
+                <div class="finding-body">
+                    <div class="finding-extract">"{finding['extract']}"</div>
+                    <div class="finding-comment">{finding['comment']}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="compliant-flag">✓ No significant findings identified in this email.</div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("### Post-meeting summary email")
-    st.markdown("*Send this within 24 hours. The school has five working days to correct anything. Silence is acceptance.*")
-    st.text_area("Copy and send:", value=post_meeting_email, height=360, key="post_meeting_output")
+    st.markdown(f"""
+    <div class="tone-card">
+        <div class="tone-label">Tone read</div>
+        <div class="tone-text">{tone_read}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if on_record:
+        st.markdown("**On the record — what the school has confirmed in writing**")
+        st.markdown('<div class="record-card">', unsafe_allow_html=True)
+        for item in on_record:
+            st.markdown(f'<div class="record-item"><span class="record-dot"></span>{item}</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    if compliance_checks:
+        st.markdown("**EHCP compliance check**")
+        for label, status, tier in compliance_checks:
+            colour_map = {'red': RED, 'amber': AMBER, 'green': GREEN}
+            colour = colour_map.get(tier, GREY)
+            bg_map = {'red': RED_BG, 'amber': AMBER_BG, 'green': GREEN_BG}
+            bg = bg_map.get(tier, '#F4F6F7')
+            st.markdown(f"""
+            <div style="border-left:3px solid {colour};padding:7px 12px;
+                background:{bg};border-radius:0 4px 4px 0;
+                font-size:13px;margin:5px 0;line-height:1.5;">
+                <strong>{label}</strong> — {status}
+            </div>
+            """, unsafe_allow_html=True)
+    if what_if_matches:
+        st.markdown("**Patterns recognised — what-if scenarios**")
+        for scenario in what_if_matches[:2]:
+            st.markdown(f"""
+            <div class="intent-flag">
+                <strong>{scenario['label']}</strong><br>
+                {scenario['description']}<br>
+                <em>Watch for: {scenario['what_to_watch']}</em>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("**What do you want to do with this?**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("✍ Draft a response", key="action_draft"):
+            st.session_state.correspondence_action = 'draft'
+            st.rerun()
+    with col2:
+        if st.button("📋 Brief me instead", key="action_brief"):
+            st.session_state.correspondence_action = 'brief'
+            st.rerun()
+    with col3:
+        if st.button("🗂 Hold in vault", key="action_hold"):
+            st.session_state.correspondence_action = 'hold'
+            st.rerun()
+    if st.session_state.correspondence_action == 'hold':
+        st.markdown(f"""
+        <div class="hold-card">
+            <strong>Held in vault.</strong> These findings are dated and stored.
+            FRED will surface them if they become relevant to future correspondence.
+            No response will be drafted. You have chosen to observe before acting —
+            that is a valid strategic decision.
+        </div>
+        """, unsafe_allow_html=True)
+    if st.session_state.correspondence_action == 'brief':
+        st.markdown("**If-this-then-that — your options**")
+        intent = intent_result['intent']
+        if intent == 'case_building':
+            options = [
+                ("If you press for records now", "The school will produce them or admit they do not exist. Either is useful. The relationship may become more formal as a result."),
+                ("If you acknowledge and hold", "You signal you are across this without confrontation. The records sit in the vault. You act when the moment serves you better."),
+            ]
+        elif intent == 'collaborative':
+            options = [
+                ("If you welcome the commitments", "You reinforce collaborative behaviour and create a written record of what has been offered. The commitments become the baseline."),
+                ("If you also note the gaps", "You can do both — welcome what is genuine and gently note what remains outstanding. The relationship stays intact and the record is complete."),
+            ]
+        else:
+            options = [
+                ("If you respond warmly and specifically", "You maintain the relationship while putting the outstanding requests on the record one more time."),
+                ("If you hold and observe", "You have seen what FRED found. The vault holds it. You watch what happens next before deciding whether to press."),
+                ("If you request a meeting", "A meeting creates a formal occasion where records will need to exist."),
+            ]
+        for condition, consequence in options:
+            st.markdown(f"""
+            <div style="background:#F4F6F7;border-radius:8px;padding:12px 16px;
+                margin-bottom:8px;font-size:13px;line-height:1.6;">
+                <strong>{condition}</strong><br>{consequence}
+            </div>
+            """, unsafe_allow_html=True)
+
+def render_draft_with_options(draft_text, answers):
+    st.markdown("### Drafted response")
+    st.markdown("*Calibrated to your relationship tone. Edit to your own voice or use as drafted.*")
+    tone = answers.get('q5', 'Not specified')
+    st.markdown(f"*Tone: {tone}*")
+    edited = st.text_area("Your response:", value=draft_text, height=320, key="draft_edit")
+    st.markdown("**Download options**")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        doc = DocxDocument()
+        doc.add_paragraph(edited)
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+        st.download_button("⬇ Word — edit in your voice", data=buf,
+            file_name="FRED_Draft_Response.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    with c2:
+        lines = [l.strip() for l in edited.split('\n') if l.strip()]
+        bullets = '\n'.join(f'• {l}' for l in lines)
+        st.download_button("⬇ Bullets — write yourself", data=bullets,
+            file_name="FRED_Key_Points.txt", mime="text/plain")
+    with c3:
+        st.download_button("⬇ Copy as drafted", data=edited,
+            file_name="FRED_Response.txt", mime="text/plain")
+    st.markdown(f"""
+    <div class="dignity-flag">
+        Before sending — consider whether pressing this point serves your child's
+        immediate situation or whether the relationship warrants a different approach.
+        FRED holds these findings regardless. You decide when and how to use them.
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_full_report(report_results, section_e_results, answers):
     st.markdown("---")
     st.markdown("## Your FRED report")
-
     ehcp_status = answers.get('q2', 'Unknown')
     process_stage = answers.get('q3', 'Not specified')
-
     st.markdown(f"""
     <div style="background:#F4F6F7;border-radius:8px;padding:13px 17px;margin:10px 0;font-size:13px;">
         <strong>Status:</strong> {ehcp_status} &nbsp;|&nbsp;
         <strong>Stage:</strong> {process_stage}
     </div>
     """, unsafe_allow_html=True)
-
     if 'final' in ehcp_status.lower():
-        st.warning(
-            "**Final EHCP pathway active.** This plan has been formally issued by the LA. "
-            "The school is now responsible for delivery. All findings below inform what you "
-            "raise at annual review — not changes to the current document."
-        )
-
+        st.warning("**Final EHCP pathway active.** All findings below inform what you raise at annual review — not changes to the current document.")
     render_traffic_legend()
-
     if section_e_results:
         st.markdown("### Section E — Outcomes")
         for r in section_e_results:
@@ -814,7 +1098,7 @@ def render_full_report(report_results, section_e_results, answers):
                 st.markdown(f"""
                 <div class="audit-header-green">Outcome {r['outcome_number']} — compliant</div>
                 <div class="audit-body">
-                    <div class="compliant-flag">✓ This outcome meets the SMART standard.</div>
+                    <div class="compliant-flag">✓ Meets the SMART standard.</div>
                     <em>"{r['outcome_text'][:200]}"</em>
                 </div>""", unsafe_allow_html=True)
             else:
@@ -826,21 +1110,25 @@ def render_full_report(report_results, section_e_results, answers):
                     {''.join(f'<div class="bestpractice-flag">◉ {g}</div>' for g in r['best_practice_gaps'])}
                 </div>""", unsafe_allow_html=True)
         st.markdown("---")
-
     if report_results:
         st.markdown("### Section F — Provision")
         unlawful_count = sum(1 for r in report_results if r['unlawful_deficiencies'] or r['additional_patterns'])
         compliant_count = sum(1 for r in report_results if r['is_compliant'])
         total = len(report_results)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total entries", total)
-        c2.metric("Lawful requirement not met", unlawful_count,
-                 delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
-                 delta_color="inverse")
-        c3.metric("Compliant", compliant_count)
+        if compliant_count > 0:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Total entries", total)
+            c2.metric("Lawful requirement not met", unlawful_count,
+                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
+                     delta_color="inverse")
+            c3.metric("Compliant", compliant_count)
+        else:
+            c1, c2 = st.columns(2)
+            c1.metric("Total entries", total)
+            c2.metric("Lawful requirement not met", unlawful_count,
+                     delta=f"{unlawful_count} entries" if unlawful_count > 0 else None,
+                     delta_color="inverse")
         st.markdown("<br>", unsafe_allow_html=True)
-
         for result in report_results:
             if result['is_compliant']:
                 st.markdown(f"""
@@ -889,35 +1177,25 @@ def render_full_report(report_results, section_e_results, answers):
                 if result['unlawful_deficiencies']:
                     st.markdown("""
                     <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
-                    <div class="evidence-line">Lack of evidence is evidence of lack.</div>
                     """, unsafe_allow_html=True)
                 st.markdown("</div><br>", unsafe_allow_html=True)
-
         st.info("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.")
-
     st.markdown(f"""
     <div class="review-capture">
         <strong>Hold this for your annual review.</strong><br>
         Enter your next annual review date and FRED will begin working through
-        these findings with you in the weeks before it. Nothing will be forgotten.
+        these findings with you in the weeks before it.
     </div>
     """, unsafe_allow_html=True)
     st.date_input("Annual review date (optional):", key="review_date")
-
-    unlawful_total = sum(
-        len(r['unlawful_deficiencies']) + len(r['additional_patterns'])
-        for r in report_results
-    )
+    unlawful_total = sum(len(r['unlawful_deficiencies']) + len(r['additional_patterns']) for r in report_results)
     if unlawful_total > 0:
         st.markdown(f"""
         <div class="subscription-signal">
             <strong>FRED has identified {unlawful_total} provision failures in this plan.</strong><br><br>
-            The full FRED service will hold these findings, track whether the school
-            delivers on its obligations, draft your correspondence, prepare you for
-            the annual review meeting with a script you can read in the room, and
-            produce the post-meeting summary that puts everything on the written record.<br><br>
+            The full FRED service adds correspondence intelligence — intent detection,
+            three finding briefings, vacuum detection, and the hold option.
             Annual subscription — from £XX per year.
-            Less than the cost of a single hour with a specialist advocate.
         </div>
         """, unsafe_allow_html=True)
 
@@ -952,20 +1230,17 @@ def generate_docx(report_results, section_e_results, answers):
     t.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = t.add_run("FRED")
     r.font.size = Pt(36); r.font.bold = True; r.font.color.rgb = BLUE_C
-
     s = doc.add_paragraph()
     s.alignment = WD_ALIGN_PARAGRAPH.CENTER
     s.add_run("Families' Rights and Entitlements Directory — EHCP Report").font.color.rgb = RGBColor(0x2E, 0x86, 0xC1)
-    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.5")
-    doc.add_paragraph("FRED provides information to help you understand the language of your child's plan and what the law says about it. It does not constitute legal advice.")
+    doc.add_paragraph(f"Status: {answers.get('q2','Unknown')} | Beta v0.6")
+    doc.add_paragraph("FRED provides information to help you understand the language of your child's plan. It does not constitute legal advice.")
     doc.add_page_break()
-
     h("Output key", level=2)
-    p("● Red — lawful requirement not met. Must be addressed.", RED_C)
-    p("● Amber — best practice gap. Recommended.", AMBER_C)
-    p("● Green — compliant. Meets the lawful standard.", GREEN_C)
+    p("● Red — lawful requirement not met.", RED_C)
+    p("● Amber — best practice gap.", AMBER_C)
+    p("● Green — compliant.", GREEN_C)
     doc.add_paragraph()
-
     if section_e_results:
         h("Section E — Outcomes")
         for r_ in section_e_results:
@@ -979,16 +1254,11 @@ def generate_docx(report_results, section_e_results, answers):
             if not r_['unlawful_failures'] and not r_['best_practice_gaps']:
                 p("✓ Meets SMART criteria.", GREEN_C)
         doc.add_page_break()
-
     if report_results:
         h("Section F — Provision")
         for result in report_results:
-            c_ = (GREEN_C if result['is_compliant']
-                 else RED_C if result['unlawful_deficiencies']
-                 else AMBER_C)
-            label = ("Compliant" if result['is_compliant']
-                    else "Lawful requirement not met" if result['unlawful_deficiencies']
-                    else "Best practice gap")
+            c_ = (GREEN_C if result['is_compliant'] else RED_C if result['unlawful_deficiencies'] else AMBER_C)
+            label = ("Compliant" if result['is_compliant'] else "Lawful requirement not met" if result['unlawful_deficiencies'] else "Best practice gap")
             h(f"Provision {result['entry_number']} — {label}", level=2, c=c_)
             p(f'"{result["entry_text"][:400]}"', italic=True)
             if result['unlawful_deficiencies']:
@@ -1003,14 +1273,6 @@ def generate_docx(report_results, section_e_results, answers):
                 h("Best practice gaps", level=3, c=AMBER_C)
                 for g in result['best_practice_gaps']:
                     p(f"◉ {g}", AMBER_C)
-            if result['ofsted_principle']:
-                op = result['ofsted_principle']
-                h("Inspection framework note", level=3, c=AMBER_C)
-                p(f"{op['area']}: {op['principle']}", AMBER_C)
-            if result['policy_gaps']:
-                h("School policy cross-reference", level=3, c=PURPLE_C)
-                for pg in result['policy_gaps']:
-                    p(f"◈ {pg}", PURPLE_C)
             if result['required_specification']:
                 h("Required specification", level=3)
                 for spec in result['required_specification']:
@@ -1020,13 +1282,8 @@ def generate_docx(report_results, section_e_results, answers):
                 for advice in result['tactical_advice']:
                     p(f"→ {advice}", BLUE_C)
             if result['unlawful_deficiencies']:
-                p("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014. Lack of evidence is evidence of lack.", BLUE_C, bold=True, italic=True)
+                p("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.", BLUE_C, bold=True, italic=True)
             doc.add_paragraph()
-
-    doc.add_page_break()
-    h("About the full FRED service")
-    doc.add_paragraph("The full FRED service holds all your documents, tracks your correspondence, drafts emails calibrated to your relationship with the school, prepares you for every meeting with a script and agenda, and stays with you through every annual review.")
-
     buf = io.BytesIO()
     doc.save(buf)
     buf.seek(0)
@@ -1034,9 +1291,7 @@ def generate_docx(report_results, section_e_results, answers):
 
 def generate_pdf(report_results, section_e_results, answers):
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-                           rightMargin=20*mm, leftMargin=20*mm,
-                           topMargin=20*mm, bottomMargin=20*mm)
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=20*mm, leftMargin=20*mm, topMargin=20*mm, bottomMargin=20*mm)
     styles = getSampleStyleSheet()
     brand = HexColor('#1B4F72')
     red = HexColor('#C0392B')
@@ -1064,15 +1319,13 @@ def generate_pdf(report_results, section_e_results, answers):
     story.append(Paragraph("FRED", ps('TT', 'Title', textColor=brand, fontSize=32)))
     story.append(Paragraph("Families' Rights and Entitlements Directory", h1))
     story.append(Spacer(1, 5*mm))
-    story.append(Paragraph(f"EHCP Report | Status: {answers.get('q2','Unknown')} | Beta v0.5", body))
-    story.append(Paragraph("This report provides information to help you understand the language of your child's plan and what the law says about it. It does not constitute legal advice.", body))
+    story.append(Paragraph(f"EHCP Report | Status: {answers.get('q2','Unknown')} | Beta v0.6", body))
+    story.append(Paragraph("Not legal advice.", body))
     story.append(Spacer(1, 4*mm))
-    story.append(Paragraph("Output key", h1))
-    story.append(Paragraph("● Red — lawful requirement not met. Must be addressed.", red_s))
-    story.append(Paragraph("● Amber — best practice gap. Recommended.", amb_s))
-    story.append(Paragraph("● Green — compliant. Meets the lawful standard.", grn_s))
+    story.append(Paragraph("● Red — lawful requirement not met.", red_s))
+    story.append(Paragraph("● Amber — best practice gap.", amb_s))
+    story.append(Paragraph("● Green — compliant.", grn_s))
     story.append(Spacer(1, 5*mm))
-
     if section_e_results:
         story.append(Paragraph("Section E — Outcomes", h1))
         for r_ in section_e_results:
@@ -1083,19 +1336,12 @@ def generate_pdf(report_results, section_e_results, answers):
                 story.append(Paragraph(f"⚠ {f_}", red_s))
             for g_ in r_['best_practice_gaps']:
                 story.append(Paragraph(f"◉ {g_}", amb_s))
-            if not r_['unlawful_failures'] and not r_['best_practice_gaps']:
-                story.append(Paragraph("✓ Meets SMART criteria.", grn_s))
             story.append(Spacer(1, 3*mm))
-
     if report_results:
         story.append(Paragraph("Section F — Provision", h1))
         for result in report_results:
-            h_ = (h2g if result['is_compliant']
-                 else h2r if result['unlawful_deficiencies']
-                 else h2a)
-            label = ("Compliant" if result['is_compliant']
-                    else "Lawful requirement not met" if result['unlawful_deficiencies']
-                    else "Best practice gap")
+            h_ = (h2g if result['is_compliant'] else h2r if result['unlawful_deficiencies'] else h2a)
+            label = ("Compliant" if result['is_compliant'] else "Lawful requirement not met" if result['unlawful_deficiencies'] else "Best practice gap")
             story.append(Paragraph(f"Provision {result['entry_number']} — {label}", h_))
             story.append(Paragraph(f'<i>"{result["entry_text"][:400]}"</i>', body))
             if result['unlawful_deficiencies']:
@@ -1110,14 +1356,6 @@ def generate_pdf(report_results, section_e_results, answers):
                 story.append(Paragraph("Best practice gaps", h3))
                 for g in result['best_practice_gaps']:
                     story.append(Paragraph(f"◉ {g}", amb_s))
-            if result['ofsted_principle']:
-                op = result['ofsted_principle']
-                story.append(Paragraph("Inspection framework note", h3))
-                story.append(Paragraph(f"<b>{op['area']}:</b> {op['principle']}", amb_s))
-            if result['policy_gaps']:
-                story.append(Paragraph("School policy cross-reference", h3))
-                for pg in result['policy_gaps']:
-                    story.append(Paragraph(f"◈ {pg}", pur_s))
             if result['required_specification']:
                 story.append(Paragraph("Required specification", h3))
                 for spec in result['required_specification']:
@@ -1127,11 +1365,8 @@ def generate_pdf(report_results, section_e_results, answers):
                 for advice in result['tactical_advice']:
                     story.append(Paragraph(f"→ {advice}", tac_s))
             if result['unlawful_deficiencies']:
-                story.append(Paragraph("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014. Lack of evidence is evidence of lack.", anc_s))
+                story.append(Paragraph("If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.", anc_s))
             story.append(Spacer(1, 5*mm))
-
-    story.append(Spacer(1, 6*mm))
-    story.append(Paragraph("Upload the expert reports (EP, OT, or SLT) to begin the Cross-Reference report.", tac_s))
     doc.build(story)
     buf.seek(0)
     return buf
@@ -1144,7 +1379,6 @@ def render_survey():
     st.markdown("---")
     st.markdown("### Beta feedback")
     st.markdown("Takes about two minutes. Every answer goes directly to the team building FRED.")
-
     with st.form("feedback_form"):
         st.selectbox("Did the report identify anything you did not already know?",
             ["Yes — significantly", "Yes — partially", "No — I knew this already"])
@@ -1154,31 +1388,21 @@ def render_survey():
             ["Yes — very simple", "Mostly", "Could be simpler", "No"])
         st.selectbox("How does it look to you?",
             ["Clean and professional", "Fine but nothing special", "Needs more personality", "Not sure"])
-        st.selectbox(
-            "Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
+        st.selectbox("Would you find it useful to personalise how FRED looks — for example choosing a colour theme or text size?",
             ["Yes — colour theme", "Yes — text size", "Yes — both", "Not bothered", "No"])
         st.selectbox("Would you pay for the one-off report?",
             ["Yes — definitely", "Possibly", "Not sure", "No"])
-        st.text_input("What feels like a fair price for the full report?",
-            placeholder="e.g. £25, £35, £50...")
-        st.selectbox(
-            "Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
+        st.text_input("What feels like a fair price for the full report?", placeholder="e.g. £25, £35, £50...")
+        st.selectbox("Would you use a subscription that holds your documents, drafts emails, and prepares you for meetings?",
             ["Yes — definitely", "Possibly", "Not sure", "No"])
-        st.text_input("What would feel like a fair monthly price?",
-            placeholder="e.g. £10, £15, £20 per month...")
+        st.text_input("What would feel like a fair monthly price?", placeholder="e.g. £10, £15, £20 per month...")
         st.text_area("Anything else — what worked, what did not, what is missing?", height=80)
-
         st.markdown("---")
         st.markdown("**Would you like to be notified when FRED launches?**")
-        notify = st.radio("", ["Yes — notify me", "No thank you"],
-                         horizontal=True, label_visibility="collapsed")
-
+        st.radio("", ["Yes — notify me", "No thank you"], horizontal=True, label_visibility="collapsed")
         submitted = st.form_submit_button("Submit feedback")
         if submitted:
-            st.success(
-                "Thank you. Your feedback has been received. "
-                "It directly informs the next version of FRED."
-            )
+            st.success("Thank you. Your feedback has been received and will be reviewed.")
 
 # ─────────────────────────────────────────────
 # LANDING PAGE
@@ -1214,7 +1438,7 @@ def render_landing():
     st.markdown(f"""
     <div class="fred-hero-cta">
         <div class="fred-btn-reassure">Upload first. Decide after. Your report is ready before you pay.</div>
-        <div class="fred-btn-pricing">From £XX for the full report — or <span onclick="">see our subscription plans</span></div>
+        <div class="fred-btn-pricing">From £XX for the full report — or <span>see our subscription plans</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1247,20 +1471,13 @@ def render_landing():
     <div class="fred-section">
         <div class="fred-sec-label" style="text-align:center;">The traffic light system</div>
         <div class="fred-sec-title">You'll always know where you stand.</div>
-        <div class="fred-sec-sub">Every finding is colour coded so you can see at a glance what matters most.</div>
         <div class="fred-traffic-legend">
-            <div class="fred-trow">
-                <div class="fred-tdot tdot-red"></div>
-                <div class="fred-ttext"><strong>Red — lawful requirement not met.</strong> The provision does not meet the statutory standard set by the Children and Families Act 2014. Must be addressed at annual review.</div>
-            </div>
-            <div class="fred-trow">
-                <div class="fred-tdot tdot-amber"></div>
-                <div class="fred-ttext"><strong>Amber — best practice gap.</strong> Meets the minimum lawful standard but falls short of what good practice recommends. Worth raising at annual review.</div>
-            </div>
-            <div class="fred-trow">
-                <div class="fred-tdot tdot-green"></div>
-                <div class="fred-ttext"><strong>Green — compliant.</strong> Meets the lawful standard. Use compliant entries as the benchmark when challenging non-compliant ones.</div>
-            </div>
+            <div class="fred-trow"><div class="fred-tdot tdot-red"></div>
+                <div class="fred-ttext"><strong>Red — lawful requirement not met.</strong> Must be addressed at annual review.</div></div>
+            <div class="fred-trow"><div class="fred-tdot tdot-amber"></div>
+                <div class="fred-ttext"><strong>Amber — best practice gap.</strong> Worth raising at annual review.</div></div>
+            <div class="fred-trow"><div class="fred-tdot tdot-green"></div>
+                <div class="fred-ttext"><strong>Green — compliant.</strong> Use as benchmark when challenging non-compliant entries.</div></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1271,7 +1488,7 @@ def render_landing():
     <div class="fred-section">
         <div class="fred-sec-label" style="text-align:center;">Pricing</div>
         <div class="fred-sec-title" style="text-align:center;">Start with what you need.</div>
-        <div class="fred-sec-sub">No hidden charges. Your report is ready before you purchase. Every route includes the full report.</div>
+        <div class="fred-sec-sub">No hidden charges. Your report is ready before you purchase.</div>
         <div class="fred-pricing-grid">
             <div class="fred-price-card">
                 <div class="fred-price-name">One-off report</div>
@@ -1294,11 +1511,11 @@ def render_landing():
                 <ul class="fred-price-features">
                     <li>Full report included</li>
                     <li>Document vault — all documents held</li>
+                    <li>Correspondence briefings — three findings, intent detection</li>
                     <li>Email support — drafted and calibrated</li>
                     <li>Meeting preparation and script</li>
                     <li>Post-meeting summary emails</li>
                     <li>Annual review preparation pack</li>
-                    <li>School transition support</li>
                 </ul>
             </div>
             <div class="fred-price-card">
@@ -1339,11 +1556,11 @@ def render_landing():
         <div class="fred-sec-title">Straightforward answers.</div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Is FRED legal advice?</div>
-            <div class="fred-faq-a">No. FRED provides information to help you understand the language of your child's plan and what the law says about it. It does not replace a solicitor or independent advocate. All guidance is referenced to the Children and Families Act 2014 and the SEND Code of Practice 2015. Where you upload a school policy or accessibility plan, FRED cross-references the school's own commitments against the provision in the plan.</div>
+            <div class="fred-faq-a">No. FRED provides information to help you understand the language of your child's plan and what the law says about it. It does not replace a solicitor or independent advocate. All guidance is referenced to the Children and Families Act 2014 and the SEND Code of Practice 2015.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">When do I pay?</div>
-            <div class="fred-faq-a">After FRED has read your plan and you have seen a preview of what it found. You upload first, see a finding from your plan, then decide whether to purchase the full report. Nothing is charged until you choose to proceed.</div>
+            <div class="fred-faq-a">After FRED has read your plan and you have seen a preview of what it found. You upload first, see a finding, then decide whether to purchase the full report. Nothing is charged until you choose to proceed.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Is my data private?</div>
@@ -1355,11 +1572,11 @@ def render_landing():
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">What documents can I upload?</div>
-            <div class="fred-faq-a">Any PDF or Word document — EHCP, EP report, OT report, school emails saved as PDF, meeting transcripts, school SEND policy, behaviour policy, or accessibility plan.</div>
+            <div class="fred-faq-a">Any PDF or Word document — EHCP, EP report, OT report, school emails, meeting transcripts, school SEND policy, behaviour policy, or accessibility plan.</div>
         </div>
         <div class="fred-faq-item">
             <div class="fred-faq-q">Can I cancel my subscription?</div>
-            <div class="fred-faq-a">Yes. Monthly subscriptions cancel anytime. Resubscribing resets to the first month rate which includes a fresh report. Annual subscriptions run twelve months. Year two renewals are at a reduced rate as the report is not repeated.</div>
+            <div class="fred-faq-a">Yes. Monthly subscriptions cancel anytime. Annual subscriptions run twelve months. Year two renewals are at a reduced rate as the report is not repeated.</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1367,9 +1584,9 @@ def render_landing():
     st.markdown('<hr class="fred-divider">', unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="text-align:center;padding:28px 0;background:var(--color-background-secondary);border-radius:10px;margin:16px 0;">
-        <div style="font-size:17px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px;">Ready to see what your child's plan actually says?</div>
-        <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;">Upload your document. See a finding. Decide after.</div>
+    <div style="text-align:center;padding:28px 0;">
+        <div style="font-size:17px;font-weight:500;color:#1A252F;margin-bottom:6px;">Ready to see what your child's plan actually says?</div>
+        <div style="font-size:13px;color:#717D7E;margin-bottom:16px;">Upload your document. See a finding. Decide after.</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1398,16 +1615,14 @@ if st.session_state.stage == 'landing':
     render_landing()
 
 elif st.session_state.stage == 'upload':
-
     st.markdown(f"""
     <div class="fred-header-bar">
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     <div class="fred-beta-notice">
-        <strong>Beta v0.5</strong> — Design and functionality are actively being developed.
-        Your feedback shapes the final product. FRED provides information to help you
-        understand the language of your child's plan and what the law says about it.
+        <strong>Beta v0.6</strong> — Design and functionality are actively being developed.
+        FRED provides information to help you understand the language of your child's plan.
         It does not constitute legal advice.
     </div>
     """, unsafe_allow_html=True)
@@ -1418,24 +1633,41 @@ elif st.session_state.stage == 'upload':
     st.markdown("Upload any document — EHCP, EP report, school email, meeting transcript, or school policy. PDF or Word. FRED works out what it is.")
 
     main_file = st.file_uploader(
-        "Upload your document",
+        "Upload your main document",
         type=['pdf', 'docx', 'doc'],
         key='main_upload',
         help="Processed privately during this session only. Not stored or shared."
     )
 
     st.markdown("""
-    <div class="fred-upload-tip">
+    <div class="upload-tip">
         <strong>Email:</strong> Open it, select print, choose Save as PDF.<br>
-        <strong>Password protected document:</strong> Open it, select print, save as PDF — this removes the lock on most LA documents.
+        <strong>Password protected document:</strong> Open it, select print, save as PDF — removes the lock on most LA documents.
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("Add another document — school policy, specialist report, email, or transcript (optional)"):
-        st.markdown("FRED cross-references everything you provide. Upload any additional documents here.")
+    with st.expander("Add another document — optional"):
+        st.markdown("School policy, specialist report, email, or transcript. FRED cross-references everything.")
         extra_1 = st.file_uploader("Additional document", type=['pdf','docx','doc'], key='extra_1')
         extra_2 = st.file_uploader("Another document", type=['pdf','docx','doc'], key='extra_2')
         extra_3 = st.file_uploader("Another document", type=['pdf','docx','doc'], key='extra_3')
+
+    if st.session_state.is_subscriber or st.session_state.email_captured:
+        st.markdown("---")
+        st.markdown(f'<div class="fred-sub-badge">✓ Subscription active — correspondence intelligence enabled</div>', unsafe_allow_html=True)
+        st.markdown("### Upload correspondence (subscription)")
+        st.markdown("Upload the last two emails for active analysis. Older correspondence goes in history.")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            active_1 = st.file_uploader("Most recent email (PDF)", type=['pdf','docx','doc'], key='active_1')
+            active_2 = st.file_uploader("Previous email (PDF)", type=['pdf','docx','doc'], key='active_2')
+        with col_b:
+            st.markdown("**Historical correspondence (optional)**")
+            st.markdown("*Older emails — used for background context and pattern detection*")
+            hist_1 = st.file_uploader("Older email 1", type=['pdf','docx','doc'], key='hist_1')
+            hist_2 = st.file_uploader("Older email 2", type=['pdf','docx','doc'], key='hist_2')
+            hist_3 = st.file_uploader("Older email 3", type=['pdf','docx','doc'], key='hist_3')
+            transcript = st.file_uploader("Meeting transcript (optional)", type=['pdf','docx','doc'], key='transcript')
 
     if main_file:
         with st.spinner("Fred is reading your document..."):
@@ -1443,24 +1675,18 @@ elif st.session_state.stage == 'upload':
             if error:
                 st.error(error)
             else:
-                doc_type = detect_doc_type(text)
                 sections = identify_sections(text)
                 st.session_state.extracted_sections = sections
                 st.session_state.raw_text = text
-
                 if sections:
-                    st.success(
-                        f"Document read. "
-                        f"Sections identified: {', '.join(sorted(sections.keys()))}. "
-                        f"Key information saved to your report summary."
-                    )
+                    st.success(f"Document read. Sections identified: {', '.join(sorted(sections.keys()))}.")
                 else:
-                    st.warning("FRED could not identify standard EHCP sections automatically. Paste Section F text below to proceed.")
+                    st.warning("FRED could not identify standard EHCP sections. Paste Section F text below.")
                     manual_f = st.text_area("Paste Section F provision text here:", height=180)
                     if manual_f:
                         st.session_state.extracted_sections['F'] = manual_f
 
-        for i, extra in enumerate([extra_1, extra_2, extra_3], 1):
+        for i, extra in enumerate([extra_1, extra_2, extra_3] if not (st.session_state.is_subscriber or st.session_state.email_captured) else [], 1):
             if extra:
                 with st.spinner(f"Reading additional document {i}..."):
                     extra_text, extra_error = read_file(extra)
@@ -1470,16 +1696,40 @@ elif st.session_state.stage == 'upload':
                         dtype = detect_doc_type(extra_text)
                         if dtype == 'policy':
                             st.session_state.policy_text = extra_text
-                            st.success(f"School policy read — ready for cross-reference.")
+                            st.success("School policy read — ready for cross-reference.")
                         elif dtype == 'email':
-                            st.session_state.email_text = extra_text
-                            st.success(f"Email read — ready for correspondence analysis.")
+                            st.session_state.active_emails.append(extra_text)
+                            st.success("Email read.")
                         elif dtype == 'transcript':
                             st.session_state.transcript_text = extra_text
-                            st.success(f"Transcript read — primary record of what was said.")
-                        else:
-                            st.session_state.policy_text = st.session_state.get('policy_text', '') + ' ' + extra_text
-                            st.success(f"Additional document {i} read and added.")
+                            st.success("Transcript read.")
+
+        if st.session_state.is_subscriber or st.session_state.email_captured:
+            active_emails = []
+            for af in [active_1, active_2]:
+                if af:
+                    t, e = read_file(af)
+                    if t:
+                        active_emails.append(t)
+            st.session_state.active_emails = active_emails
+            history_texts = []
+            for hf in [hist_1, hist_2, hist_3]:
+                if hf:
+                    t, e = read_file(hf)
+                    if t:
+                        history_texts.append(t)
+            st.session_state.history_emails = history_texts
+            if transcript:
+                t, e = read_file(transcript)
+                if t:
+                    st.session_state.transcript_text = t
+                    st.success("Transcript read — primary record of what was said.")
+            if history_texts:
+                vacuum_count = 0
+                for ht in history_texts:
+                    vacuum_count += len(detect_vacuum_statements(ht))
+                if vacuum_count > 0:
+                    st.info(f"FRED has read {len(history_texts)} historical email(s). {vacuum_count} statement(s) implying undocumented history identified and held in vault.")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -1492,27 +1742,18 @@ elif st.session_state.stage == 'upload':
                 st.rerun()
 
 elif st.session_state.stage == 'questions':
-
     st.markdown(f"""
     <div class="fred-header-bar">
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     """, unsafe_allow_html=True)
-
     st.markdown("### A few quick questions")
-    st.markdown("These shape the report you receive.")
-
     q1 = st.selectbox("1. What have you uploaded?", options=[
-        "My child's EHCP",
-        "An EP (Educational Psychologist) report",
-        "A specialist report (OT, SALT, or other)",
-        "School or LA correspondence",
-        "Meeting notes or transcript",
-        "More than one of the above",
+        "My child's EHCP", "An EP report", "A specialist report (OT, SALT, or other)",
+        "School or LA correspondence", "Meeting notes or transcript", "More than one of the above",
     ])
     st.session_state.answers['q1'] = q1
-
     if "EHCP" in q1:
         q2 = st.selectbox("2. Is this a draft or final issued EHCP?", options=[
             "Draft — I am still in the review process",
@@ -1522,7 +1763,6 @@ elif st.session_state.stage == 'questions':
         st.session_state.answers['q2'] = q2
     else:
         st.session_state.answers['q2'] = "Not an EHCP"
-
     q3 = st.selectbox("3. Which best describes your situation right now?", options=[
         "I have just received this and want to understand it",
         "I have an upcoming annual review or meeting",
@@ -1531,29 +1771,19 @@ elif st.session_state.stage == 'questions':
         "I am just starting the EHCP process",
     ])
     st.session_state.answers['q3'] = q3
-
     q4 = st.selectbox("4. Do you have any important dates coming up?", options=[
-        "No upcoming dates right now",
-        "Yes — annual review",
-        "Yes — meeting with school or LA",
-        "Yes — LA deadline",
+        "No upcoming dates right now", "Yes — annual review",
+        "Yes — meeting with school or LA", "Yes — LA deadline",
     ])
     st.session_state.answers['q4'] = q4
     if q4 != "No upcoming dates right now":
         upcoming_date = st.date_input("When is this?")
         st.session_state.answers['upcoming_date'] = str(upcoming_date)
-
-    q5 = st.selectbox(
-        "5. How would you describe your current relationship with the school or LA?",
-        options=[
-            "Warm and collaborative",
-            "Constructive but cautious",
-            "Professionally firm",
-            "Formally assertive",
-            "Rights-based and formal",
-        ])
+    q5 = st.selectbox("5. How would you describe your current relationship with the school or LA?", options=[
+        "Warm and collaborative", "Constructive but cautious",
+        "Professionally firm", "Formally assertive", "Rights-based and formal",
+    ])
     st.session_state.answers['q5'] = q5
-
     col1, col2 = st.columns(2)
     with col1:
         if st.button("← Back", key="q_back"):
@@ -1565,42 +1795,45 @@ elif st.session_state.stage == 'questions':
             st.rerun()
 
 elif st.session_state.stage == 'processing':
-
     st.markdown(f"""
     <div class="fred-header-bar">
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     """, unsafe_allow_html=True)
-
     st.markdown("### Fred is working...")
-
     sections = st.session_state.extracted_sections
     policy_text = st.session_state.get('policy_text', '')
-    email_text = st.session_state.get('email_text', '')
+    active_emails = st.session_state.get('active_emails', [])
     transcript_text = st.session_state.get('transcript_text', '')
-
     report_results = []
     section_e_results = []
-    correspondence_analysis = None
-    post_meeting_email = ''
-
     with st.spinner("Reading Section F provision entries..."):
         if 'F' in sections:
             entries = extract_entries(sections['F'])
             for i, entry in enumerate(entries):
                 if len(entry.strip()) > 20:
                     report_results.append(audit_entry(entry, i+1, policy_text))
-
     with st.spinner("Checking Section E outcomes..."):
         if 'E' in sections:
             section_e_results = audit_section_e(sections['E'])
-
-    if email_text:
-        with st.spinner("Analysing correspondence..."):
-            correspondence_analysis = analyse_correspondence(email_text, sections, transcript_text)
-            post_meeting_email = generate_post_meeting_email(correspondence_analysis, st.session_state.answers)
-
+    three_findings = None
+    intent_result = None
+    tone_read = None
+    on_record = None
+    compliance_checks = None
+    what_if_matches = None
+    draft_email = None
+    if active_emails and (st.session_state.is_subscriber or st.session_state.email_captured):
+        with st.spinner("Reading correspondence..."):
+            combined_active = '\n\n---\n\n'.join(active_emails)
+            intent_result = detect_intent(combined_active)
+            three_findings = generate_three_findings(combined_active, sections, transcript_text)
+            tone_read = generate_tone_read(intent_result, combined_active)
+            on_record = generate_on_the_record(combined_active)
+            compliance_checks = generate_ehcp_compliance_check(combined_active, sections)
+            what_if_matches = match_what_if_scenarios(combined_active)
+            draft_email = generate_post_meeting_email({'contradictions': [], 'deflected': []}, st.session_state.answers)
     sneak_peek = None
     for r in report_results:
         if r['unlawful_deficiencies']:
@@ -1608,110 +1841,118 @@ elif st.session_state.stage == 'processing':
             break
     if sneak_peek is None and report_results:
         sneak_peek = report_results[0]
-
     st.session_state.report_results = report_results
     st.session_state.section_e_results = section_e_results
-    st.session_state.correspondence_analysis = correspondence_analysis
-    st.session_state.post_meeting_email = post_meeting_email
+    st.session_state.three_findings = three_findings
+    st.session_state.intent_result = intent_result
+    st.session_state.tone_read = tone_read
+    st.session_state.on_record = on_record
+    st.session_state.compliance_checks = compliance_checks
+    st.session_state.what_if_matches = what_if_matches
+    st.session_state.draft_email = draft_email
     st.session_state.sneak_peek_result = sneak_peek
     st.session_state.stage = 'preview'
     st.rerun()
 
 elif st.session_state.stage == 'preview':
-
     st.markdown(f"""
     <div class="fred-header-bar">
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     """, unsafe_allow_html=True)
-
     sneak_peek = st.session_state.sneak_peek_result
-
     if sneak_peek:
-        render_sneak_peek(sneak_peek)
-
+        unlawful = sneak_peek['unlawful_deficiencies'][:3]
+        entry_preview = sneak_peek['entry_text'][:200]
+        st.markdown(f"""
+        <div style="background:{BRAND_BLUE};color:white;
+            padding:10px 16px;border-radius:6px 6px 0 0;font-size:13px;font-weight:500;">
+            FRED has read your plan — here is one finding
+        </div>
+        <div style="padding:14px 16px;background:white;border:1px solid #D5D8DC;border-top:none;">
+            <div style="font-size:12px;color:{GREY};font-style:italic;margin-bottom:10px;line-height:1.5;">
+                "{entry_preview}{'...' if len(sneak_peek['entry_text']) > 200 else ''}"
+            </div>
+            {''.join(f'<div class="unlawful-flag">⚠ {d}</div>' for d in unlawful)}
+            <div class="anchor-line">If it is not specified and evidenced, it is not lawfully enforceable under the Children and Families Act 2014.</div>
+        </div>
+        <div style="background:#F4F6F7;padding:16px;text-align:center;
+            border:1px solid #D5D8DC;border-top:none;border-radius:0 0 6px 6px;">
+            <div style="font-size:14px;font-weight:500;color:#1A252F;margin-bottom:4px;">
+                This is one entry from Section F of your plan
+            </div>
+            <div style="font-size:12px;color:{GREY};margin-bottom:10px;line-height:1.6;max-width:360px;margin-left:auto;margin-right:auto;">
+                Your full report covers every provision entry across Section F and Section E outcomes —
+                with tactical advice and required specification for each finding.
+            </div>
+            <div style="font-size:13px;font-weight:500;color:{BRAND_BLUE};margin-bottom:12px;">
+                Your report is ready.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### Get your full report — beta is free")
-    st.markdown("FRED is in beta. Enter your email to receive your full report and access the complete service. No payment required during beta.")
-
+    st.markdown("Enter your email to receive your full report and access the complete service. No payment required during beta.")
     with st.form("email_capture_form"):
         email_input = st.text_input("Your email address", placeholder="your@email.com")
         submitted = st.form_submit_button("Get full access →")
         if submitted:
             if email_input and '@' in email_input:
                 st.session_state.email_captured = True
+                st.session_state.is_subscriber = True
                 st.session_state.captured_email = email_input
                 st.session_state.stage = 'results'
                 st.rerun()
             else:
                 st.warning("Please enter a valid email address.")
-
-    st.markdown(f"""
-    <div style="font-size:11px;color:{GREY};text-align:center;font-style:italic;margin-top:6px;">
-        Your email is used to send your report only. Not shared with third parties.
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
+    st.markdown(f"<div style='font-size:11px;color:{GREY};text-align:center;font-style:italic;margin-top:6px;'>Your email is used to send your report only. Not shared with third parties.</div>", unsafe_allow_html=True)
+    col1, _ = st.columns(2)
     with col1:
         if st.button("← Back", key="preview_back"):
             st.session_state.stage = 'questions'
             st.rerun()
 
 elif st.session_state.stage == 'results':
-
     st.markdown(f"""
     <div class="fred-header-bar">
         <div class="fred-header-title">FRED</div>
         <div class="fred-header-sub">Families' Rights and Entitlements Directory</div>
     </div>
     """, unsafe_allow_html=True)
-
     report_results = st.session_state.report_results
     section_e_results = st.session_state.get('section_e_results', [])
     answers = st.session_state.answers
-    correspondence_analysis = st.session_state.get('correspondence_analysis')
-    post_meeting_email = st.session_state.get('post_meeting_email', '')
-
-    if correspondence_analysis:
-        render_correspondence(correspondence_analysis, post_meeting_email)
+    three_findings = st.session_state.get('three_findings')
+    intent_result = st.session_state.get('intent_result')
+    tone_read = st.session_state.get('tone_read', '')
+    on_record = st.session_state.get('on_record', [])
+    compliance_checks = st.session_state.get('compliance_checks', [])
+    what_if_matches = st.session_state.get('what_if_matches', [])
+    draft_email = st.session_state.get('draft_email', '')
+    if three_findings is not None and intent_result is not None:
+        render_three_findings(three_findings, tone_read, on_record, compliance_checks, what_if_matches, intent_result)
+        if st.session_state.correspondence_action == 'draft':
+            render_draft_with_options(draft_email, answers)
         st.markdown("---")
-
     if report_results or section_e_results:
         render_full_report(report_results, section_e_results, answers)
-
     st.markdown("---")
     st.markdown("### Download your report")
     c1, c2 = st.columns(2)
     with c1:
         docx_buf = generate_docx(report_results, section_e_results, answers)
-        st.download_button(
-            "⬇ Download as Word (.docx)",
-            data=docx_buf,
+        st.download_button("⬇ Download as Word (.docx)", data=docx_buf,
             file_name="FRED_Report.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            help="Best for Windows and Microsoft Office users"
-        )
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     with c2:
         pdf_buf = generate_pdf(report_results, section_e_results, answers)
-        st.download_button(
-            "⬇ Download as PDF",
-            data=pdf_buf,
-            file_name="FRED_Report.pdf",
-            mime="application/pdf",
-            help="Best for Apple devices — universally readable"
-        )
-
+        st.download_button("⬇ Download as PDF", data=pdf_buf,
+            file_name="FRED_Report.pdf", mime="application/pdf")
     st.markdown("---")
     st.markdown("### Add more documents")
-    st.markdown(
-        "Upload school emails, meeting transcripts, specialist reports, or school policies "
-        "to build the complete picture. FRED will cross-reference everything."
-    )
-    extra_post = st.file_uploader(
-        "Add a document", type=['pdf', 'docx', 'doc'], key='post_report_upload'
-    )
+    st.markdown("Upload emails, transcripts, or specialist reports to build the complete picture.")
+    extra_post = st.file_uploader("Add a document", type=['pdf','docx','doc'], key='post_report_upload')
     if extra_post:
         with st.spinner("Reading..."):
             extra_text, extra_error = read_file(extra_post)
@@ -1720,30 +1961,17 @@ elif st.session_state.stage == 'results':
             else:
                 dtype = detect_doc_type(extra_text)
                 if dtype == 'email':
-                    st.session_state.email_text = extra_text
-                    st.success("Email read. Running correspondence analysis...")
-                    ca = analyse_correspondence(extra_text, st.session_state.extracted_sections, st.session_state.get('transcript_text', ''))
-                    pme = generate_post_meeting_email(ca, answers)
-                    st.session_state.correspondence_analysis = ca
-                    st.session_state.post_meeting_email = pme
-                    st.rerun()
+                    st.session_state.active_emails = [extra_text]
+                    st.success("Email read. Go back to run the correspondence briefing.")
                 elif dtype == 'transcript':
                     st.session_state.transcript_text = extra_text
-                    st.success("Transcript read and added to the vault.")
+                    st.success("Transcript read and added.")
                 elif dtype == 'policy':
                     st.session_state.policy_text = extra_text
-                    st.success("School policy read and added. Re-running report with cross-reference...")
-                    sections = st.session_state.extracted_sections
-                    if 'F' in sections:
-                        entries = extract_entries(sections['F'])
-                        new_results = [audit_entry(e, i+1, extra_text) for i, e in enumerate(entries) if len(e.strip()) > 20]
-                        st.session_state.report_results = new_results
-                    st.rerun()
+                    st.success("School policy read and added.")
                 else:
-                    st.success("Document read and added to your file.")
-
+                    st.success("Document read and added.")
     render_survey()
-
     st.markdown("---")
     if st.button("Start new report"):
         for key in list(defaults.keys()):
@@ -1751,15 +1979,11 @@ elif st.session_state.stage == 'results':
                 del st.session_state[key]
         st.rerun()
 
-# ─────────────────────────────────────────────
-# FOOTER — NON LANDING PAGES
-# ─────────────────────────────────────────────
-
 if st.session_state.stage not in ('landing',):
     st.markdown(
         f"<div style='text-align:center;color:{GREY};font-size:12px;padding-top:8px;'>"
         "FRED — Families' Rights and Entitlements Directory &nbsp;|&nbsp; "
-        "Beta v0.5 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
+        "Beta v0.6 &nbsp;|&nbsp; Not legal advice &nbsp;|&nbsp; "
         "Documents read during your session only — not stored or retained"
         "</div>",
         unsafe_allow_html=True
